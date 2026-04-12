@@ -1,0 +1,181 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Perfil {
+  ADMIN
+  OPERADOR
+  CLIENTE
+  FORNECEDOR
+}
+
+enum TituloTipo {
+  CHEQUE
+  BOLETO
+  PROMISSORIA
+}
+
+enum TituloStatus {
+  PENDENTE
+  APROVADO
+  VENCIDO
+  LIQUIDADO
+  PROTESTADO
+  CANCELADO
+}
+
+enum ContratoStatus {
+  AGUARDANDO_ASSINATURA
+  ASSINADO
+  EXPIRADO
+}
+
+enum ComunicacaoTipo {
+  EMAIL
+  WHATSAPP
+}
+
+enum ComunicacaoGatilho {
+  D_MENOS_3
+  D_MENOS_1
+  D_0
+  D_MAIS_1
+  D_MAIS_3
+  D_MAIS_5
+}
+
+model Usuario {
+  id        String   @id @default(cuid())
+  nome      String
+  email     String   @unique
+  senha     String
+  perfil    Perfil   @default(OPERADOR)
+  ativo     Boolean  @default(true)
+  criadoEm  DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  cliente    Cliente?
+  fornecedor Fornecedor?
+
+  @@map("usuarios")
+}
+
+model Cliente {
+  id        String   @id @default(cuid())
+  usuarioId String   @unique
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+  nome      String
+  cpfCnpj   String   @unique
+  email     String
+  telefone  String?
+  endereco  String?
+  ativo     Boolean  @default(true)
+  criadoEm  DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  titulos Titulo[]
+
+  @@map("clientes")
+}
+
+model Fornecedor {
+  id           String   @id @default(cuid())
+  usuarioId    String   @unique
+  usuario      Usuario  @relation(fields: [usuarioId], references: [id])
+  nome         String
+  cpfCnpj      String   @unique
+  email        String
+  telefone     String?
+  capitalTotal Decimal  @default(0) @db.Decimal(15, 2)
+  ativo        Boolean  @default(true)
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  titulos Titulo[]
+
+  @@map("fornecedores")
+}
+
+model Titulo {
+  id                  String       @id @default(cuid())
+  tipo                TituloTipo
+  numero              String
+  emitenteCpfCnpj     String
+  emitenteNome        String
+  sacadoCpfCnpj       String
+  sacadoNome          String
+  dataEmissao         DateTime
+  dataVencimento      DateTime
+  prazo               Int
+  valor               Decimal      @db.Decimal(15, 2)
+  taxaCliente         Decimal      @db.Decimal(8, 4)
+  taxaFornecedor      Decimal      @db.Decimal(8, 4)
+  encargo             Decimal      @db.Decimal(15, 2)
+  valorLiquidoCliente Decimal      @db.Decimal(15, 2)
+  custoCedente        Decimal      @db.Decimal(15, 2)
+  spreadBruto         Decimal      @db.Decimal(15, 2)
+  taxaEspelho         Decimal?     @db.Decimal(8, 4)
+  baseEspelho         Decimal?     @db.Decimal(15, 2)
+  impostoProvisao     Decimal?     @db.Decimal(15, 2)
+  spreadLiquido       Decimal?     @db.Decimal(15, 2)
+  garantiaUrl         String?
+  clienteId           String?
+  cliente             Cliente?     @relation(fields: [clienteId], references: [id])
+  fornecedorId        String?
+  fornecedor          Fornecedor?  @relation(fields: [fornecedorId], references: [id])
+  status              TituloStatus @default(PENDENTE)
+  observacoes         String?
+  criadoEm            DateTime     @default(now())
+  atualizadoEm        DateTime     @updatedAt
+
+  contrato     Contrato?
+  comunicacoes Comunicacao[]
+
+  @@map("titulos")
+}
+
+model Contrato {
+  id              String         @id @default(cuid())
+  tituloId        String         @unique
+  titulo          Titulo         @relation(fields: [tituloId], references: [id])
+  conteudo        String         @db.Text
+  status          ContratoStatus @default(AGUARDANDO_ASSINATURA)
+  assinadoEm      DateTime?
+  signatarioEmail String?
+  criadoEm        DateTime       @default(now())
+  atualizadoEm    DateTime       @updatedAt
+
+  @@map("contratos")
+}
+
+model Comunicacao {
+  id        String             @id @default(cuid())
+  tituloId  String
+  titulo    Titulo             @relation(fields: [tituloId], references: [id])
+  tipo      ComunicacaoTipo
+  gatilho   ComunicacaoGatilho
+  enviadoEm DateTime?
+  status    String             @default("PENDENTE")
+  erro      String?
+  criadoEm  DateTime           @default(now())
+
+  @@map("comunicacoes")
+}
+
+model Configuracao {
+  id               String   @id @default("default")
+  taxaMinimaFiscal Decimal  @default(0.5)  @db.Decimal(8, 4)
+  aliquotaImposto  Decimal  @default(7)    @db.Decimal(5, 2)
+  nomeEmpresa      String   @default("Efficaz Factoring")
+  cnpj             String?
+  emailSistema     String?
+  whatsappApiKey   String?
+  atualizadoEm     DateTime @updatedAt
+
+  @@map("configuracoes")
+}
