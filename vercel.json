@@ -2,5 +2,5 @@
   "buildCommand": "npx prisma generate && npx prisma db push --accept-data-loss && next build",
   "outputDirectory": ".next",
   "framework": "nextjs",
-  "installCommand": "npm install"
+  "installCommand": "npm install --legacy-peer-deps"
 }
