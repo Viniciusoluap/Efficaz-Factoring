@@ -5,6 +5,11 @@ import { prisma } from '@/lib/prisma';
 import nodemailer from 'nodemailer';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import {
+  enviarWhatsApp,
+  formatarTelefone,
+  montarMensagemVencimento,
+} from '@/lib/whatsapp';
 
 function criarTransporter() {
   return nodemailer.createTransport({
@@ -24,11 +29,17 @@ const gatilhoLabel: Record<string, string> = {
   D_MAIS_5: '5 dias após o vencimento',
 };
 
+const tipoLabel: Record<string, string> = {
+  CHEQUE: 'Cheque', BOLETO: 'Boleto', PROMISSORIA: 'Promissória',
+};
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
 
-  const { tituloIds, gatilho } = await req.json();
+  const { tituloIds, gatilho, canal = 'ambos' } = await req.json();
+  // canal: 'email' | 'whatsapp' | 'ambos'
+
   if (!tituloIds?.length || !gatilho) {
     return NextResponse.json({ error: 'Campos obrigatórios ausentes.' }, { status: 400 });
   }
@@ -39,61 +50,127 @@ export async function POST(req: NextRequest) {
   });
 
   const transporter = criarTransporter();
-  const resultados: string[] = [];
+  const enviados: string[] = [];
 
   for (const titulo of titulos) {
-    const emailDestino = titulo.cliente?.email;
-    if (!emailDestino) continue;
-
-    const vencimento = format(new Date(titulo.dataVencimento), "dd/MM/yyyy", { locale: ptBR });
+    const cliente = titulo.cliente;
+    const vencimento = format(new Date(titulo.dataVencimento), 'dd/MM/yyyy', { locale: ptBR });
     const desc = gatilhoLabel[gatilho] ?? gatilho;
 
-    try {
-      await transporter.sendMail({
-        from: `"Efficaz Factoring" <${process.env.SMTP_USER}>`,
-        to: emailDestino,
-        subject: `[Efficaz Factoring] Aviso de vencimento — Título ${titulo.numero}`,
-        html: `
-          <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;">
-            <h2 style="color:#1e3a8a;">Aviso de Vencimento</h2>
-            <p>Olá, <strong>${titulo.cliente?.nome ?? 'Cliente'}</strong>.</p>
-            <p>Este é um aviso automático sobre o título <strong>${titulo.numero}</strong>,
-            que vence <strong>${desc}</strong> (${vencimento}).</p>
-            <div style="background:#f1f5f9;border-radius:12px;padding:16px;margin:16px 0;">
-              <p style="margin:4px 0;"><strong>Tipo:</strong> ${titulo.tipo}</p>
-              <p style="margin:4px 0;"><strong>Número:</strong> ${titulo.numero}</p>
-              <p style="margin:4px 0;"><strong>Valor:</strong> R$ ${Number(titulo.valor).toFixed(2).replace('.', ',')}</p>
-              <p style="margin:4px 0;"><strong>Vencimento:</strong> ${vencimento}</p>
+    // ── E-mail ──────────────────────────────────────────
+    if ((canal === 'email' || canal === 'ambos') && cliente?.email) {
+      try {
+        await transporter.sendMail({
+          from: `"Efficaz Factoring" <${process.env.SMTP_USER}>`,
+          to: cliente.email,
+          subject: `[Efficaz Factoring] Aviso de vencimento — Título ${titulo.numero}`,
+          html: `
+            <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;">
+              <div style="background:linear-gradient(135deg,#1d4ed8,#1e3a8a);border-radius:16px 16px 0 0;padding:24px;text-align:center;">
+                <h1 style="color:#fff;margin:0;font-size:20px;">Efficaz <span style="font-weight:300;color:#fbbf24;">Factoring</span></h1>
+              </div>
+              <div style="background:#fff;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 16px 16px;padding:24px;">
+                <h2 style="color:#1e3a8a;font-size:16px;">⚠️ Aviso de Vencimento</h2>
+                <p>Olá, <strong>${cliente.nome}</strong>.</p>
+                <p>O título abaixo vence <strong>${desc}</strong>:</p>
+                <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;">
+                  <tr style="background:#f8fafc;">
+                    <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;">Tipo</td>
+                    <td style="padding:10px 14px;border:1px solid #e5e7eb;">${tipoLabel[titulo.tipo] ?? titulo.tipo}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;">Número</td>
+                    <td style="padding:10px 14px;border:1px solid #e5e7eb;">${titulo.numero}</td>
+                  </tr>
+                  <tr style="background:#f8fafc;">
+                    <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;">Valor</td>
+                    <td style="padding:10px 14px;border:1px solid #e5e7eb;color:#1d4ed8;font-weight:700;">
+                      R$ ${Number(titulo.valor).toFixed(2).replace('.', ',')}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;">Vencimento</td>
+                    <td style="padding:10px 14px;border:1px solid #e5e7eb;">${vencimento}</td>
+                  </tr>
+                </table>
+                <p style="color:#6b7280;font-size:13px;">
+                  Dúvidas? <a href="mailto:contato@grupoefficaz.com.br" style="color:#1d4ed8;">contato@grupoefficaz.com.br</a>
+                </p>
+              </div>
+              <p style="text-align:center;color:#9ca3af;font-size:11px;margin-top:12px;">
+                © ${new Date().getFullYear()} Efficaz Factoring
+              </p>
             </div>
-            <p>Em caso de dúvidas, entre em contato: <a href="mailto:contato@grupoefficaz.com.br">contato@grupoefficaz.com.br</a></p>
-            <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;"/>
-            <p style="color:#9ca3af;font-size:12px;">© ${new Date().getFullYear()} Efficaz Factoring</p>
-          </div>
-        `,
-      });
+          `,
+        });
 
-      await prisma.comunicacao.create({
-        data: {
-          tituloId: titulo.id,
-          tipo: 'EMAIL',
-          gatilho: gatilho as any,
-          enviadoEm: new Date(),
-          status: 'ENVIADO',
-        },
-      });
-      resultados.push(titulo.id);
-    } catch (err: any) {
-      await prisma.comunicacao.create({
-        data: {
-          tituloId: titulo.id,
-          tipo: 'EMAIL',
-          gatilho: gatilho as any,
-          status: 'ERRO',
-          erro: err.message,
-        },
-      });
+        await prisma.comunicacao.create({
+          data: {
+            tituloId: titulo.id,
+            tipo: 'EMAIL',
+            gatilho: gatilho as any,
+            enviadoEm: new Date(),
+            status: 'ENVIADO',
+          },
+        });
+        enviados.push(`${titulo.id}:email`);
+      } catch (err: any) {
+        await prisma.comunicacao.create({
+          data: {
+            tituloId: titulo.id,
+            tipo: 'EMAIL',
+            gatilho: gatilho as any,
+            status: 'ERRO',
+            erro: err.message,
+          },
+        });
+      }
+    }
+
+    // ── WhatsApp ─────────────────────────────────────────
+    if ((canal === 'whatsapp' || canal === 'ambos') && cliente?.telefone) {
+      try {
+        const telefoneFormatado = formatarTelefone(cliente.telefone);
+        const mensagem = montarMensagemVencimento({
+          nomeCliente: cliente.nome,
+          numeroTitulo: titulo.numero,
+          tipoTitulo: tipoLabel[titulo.tipo] ?? titulo.tipo,
+          valorTitulo: Number(titulo.valor),
+          dataVencimento: vencimento,
+          gatilho,
+        });
+
+        const ok = await enviarWhatsApp({ telefone: telefoneFormatado, mensagem });
+
+        await prisma.comunicacao.create({
+          data: {
+            tituloId: titulo.id,
+            tipo: 'WHATSAPP',
+            gatilho: gatilho as any,
+            enviadoEm: ok ? new Date() : undefined,
+            status: ok ? 'ENVIADO' : 'ERRO',
+            erro: ok ? null : 'Falha Z-API ou instância não configurada',
+          },
+        });
+
+        if (ok) enviados.push(`${titulo.id}:whatsapp`);
+      } catch (err: any) {
+        await prisma.comunicacao.create({
+          data: {
+            tituloId: titulo.id,
+            tipo: 'WHATSAPP',
+            gatilho: gatilho as any,
+            status: 'ERRO',
+            erro: err.message,
+          },
+        });
+      }
     }
   }
 
-  return NextResponse.json({ enviados: resultados.length, total: titulos.length });
+  return NextResponse.json({
+    enviados: enviados.length,
+    total: titulos.length,
+    detalhes: enviados,
+  });
 }

@@ -6,6 +6,7 @@ import { calcularOperacao, calcularFiscal, formatarMoeda } from '@/lib/calculos'
 import { differenceInDays, format } from 'date-fns';
 import { Save, Calculator, AlertCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import OcrCheque from '@/components/sistema/OcrCheque';
 
 const hoje = format(new Date(), 'yyyy-MM-dd');
 
@@ -94,6 +95,23 @@ export default function NovoTituloPage() {
             <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-xs font-bold">1</span>
             Dados do Título
           </h2>
+          {form.tipo === 'CHEQUE' && (
+            <div className="mb-4">
+              <OcrCheque
+                onExtrair={(dados) => {
+                  if (dados.numero) set('numero', dados.numero);
+                  if (dados.valor) set('valor', dados.valor.replace(',', '.'));
+                  if (dados.data) {
+                    const partes = dados.data.split('/');
+                    if (partes.length === 3) {
+                      set('dataVencimento', `${partes[2]}-${partes[1].padStart(2,'0')}-${partes[0].padStart(2,'0')}`);
+                    }
+                  }
+                }}
+              />
+            </div>
+          )}
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <label className={labelCls}>Tipo *</label>
