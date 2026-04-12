@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import Link from 'next/link';
 import { Plus, FileText, Filter } from 'lucide-react';
+import ExportarTitulosBtn from '@/components/sistema/ExportarTitulosBtn';
 
 const statusLabel: Record<TituloStatus, string> = {
   PENDENTE: 'Pendente', APROVADO: 'Aprovado', VENCIDO: 'Vencido',
@@ -48,13 +49,16 @@ export default async function TitulosPage() {
         <div>
           <p className="text-sm text-gray-500">{titulos.length} título(s) cadastrado(s)</p>
         </div>
-        <Link
-          href="/sistema/titulos/novo"
-          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm"
-        >
-          <Plus className="w-4 h-4" />
-          Novo Título
-        </Link>
+        <div className="flex items-center gap-2">
+          <ExportarTitulosBtn />
+          <Link
+            href="/sistema/titulos/novo"
+            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            Novo Título
+          </Link>
+        </div>
       </div>
 
       {/* Totais */}
