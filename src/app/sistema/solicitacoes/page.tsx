@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Inbox, Phone, Mail, Building2, Calendar, MessageSquare, RefreshCw } from 'lucide-react';
+import { Inbox, Phone, Mail, Building2, RefreshCw, Trash2, CheckCheck, Eye, MessageSquare, MapPin, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -14,6 +14,7 @@ type Solicitacao = {
   porte: string | null;
   servico: string | null;
   mensagem: string | null;
+  lida: boolean;
   criadoEm: string;
 };
 
@@ -21,6 +22,7 @@ export default function SolicitacoesPage() {
   const [dados, setDados] = useState<Solicitacao[]>([]);
   const [loading, setLoading] = useState(true);
   const [selecionada, setSelecionada] = useState<Solicitacao | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const carregar = () => {
     setLoading(true);
@@ -32,12 +34,42 @@ export default function SolicitacoesPage() {
 
   useEffect(() => { carregar(); }, []);
 
+  const marcarLida = async (id: string, lida: boolean) => {
+    await fetch(`/api/solicitacoes/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lida }),
+    });
+    setDados(prev => prev.map(s => s.id === id ? { ...s, lida } : s));
+    if (selecionada?.id === id) setSelecionada(prev => prev ? { ...prev, lida } : null);
+  };
+
+  const excluir = async (id: string) => {
+    await fetch(`/api/solicitacoes/${id}`, { method: 'DELETE' });
+    setDados(prev => prev.filter(s => s.id !== id));
+    if (selecionada?.id === id) setSelecionada(null);
+    setConfirmDelete(null);
+  };
+
+  const verDetalhes = (s: Solicitacao) => {
+    setSelecionada(s);
+    if (!s.lida) marcarLida(s.id, true);
+  };
+
+  const naoLidas = dados.filter(s => !s.lida).length;
+
   return (
     <div className="max-w-5xl space-y-5">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <Inbox className="w-5 h-5 text-blue-600" /> Solicitações do Site
+            <Inbox className="w-5 h-5 text-blue-600" />
+            Solicitações do Site
+            {naoLidas > 0 && (
+              <span className="bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                {naoLidas} nova{naoLidas > 1 ? 's' : ''}
+              </span>
+            )}
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">Leads recebidos pelo formulário de contato</p>
         </div>
@@ -63,26 +95,67 @@ export default function SolicitacoesPage() {
           {/* Lista */}
           <div className="lg:col-span-2 space-y-2">
             {dados.map(s => (
-              <button
+              <div
                 key={s.id}
-                onClick={() => setSelecionada(s)}
-                className={`w-full text-left bg-white rounded-xl border p-4 transition-all shadow-sm hover:shadow-md ${
+                className={`bg-white rounded-xl border p-4 shadow-sm transition-all ${
                   selecionada?.id === s.id ? 'border-blue-400 ring-2 ring-blue-100' : 'border-gray-100'
-                }`}
+                } ${!s.lida ? 'border-l-4 border-l-blue-500' : ''}`}
               >
+                {/* Cabeçalho */}
                 <div className="flex items-start justify-between gap-2 mb-1">
-                  <p className="font-semibold text-gray-800 text-sm truncate">{s.nome}</p>
+                  <div className="flex items-center gap-2 min-w-0">
+                    {!s.lida && <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0" />}
+                    <p className={`text-sm truncate ${!s.lida ? 'font-bold text-gray-900' : 'font-semibold text-gray-700'}`}>
+                      {s.nome}
+                    </p>
+                  </div>
                   <span className="text-xs text-gray-400 flex-shrink-0">
                     {format(new Date(s.criadoEm), 'dd/MM', { locale: ptBR })}
                   </span>
                 </div>
-                <p className="text-xs text-gray-500 truncate">{s.empresa}</p>
+                <p className="text-xs text-gray-500 truncate mb-2 ml-4">{s.empresa}</p>
                 {s.servico && (
-                  <span className="mt-2 inline-block text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
+                  <span className="ml-4 inline-block text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full mb-3">
                     {s.servico}
                   </span>
                 )}
-              </button>
+
+                {/* Botões de ação */}
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={() => verDetalhes(s)}
+                    className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium bg-blue-50 hover:bg-blue-100 text-blue-700 px-2 py-1.5 rounded-lg transition-colors"
+                  >
+                    <Eye className="w-3.5 h-3.5" /> Ver
+                  </button>
+                  <button
+                    onClick={() => marcarLida(s.id, !s.lida)}
+                    className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium px-2 py-1.5 rounded-lg transition-colors ${
+                      s.lida
+                        ? 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                        : 'bg-green-50 hover:bg-green-100 text-green-700'
+                    }`}
+                  >
+                    <CheckCheck className="w-3.5 h-3.5" />
+                    {s.lida ? 'Não lida' : 'Lida'}
+                  </button>
+                  {confirmDelete === s.id ? (
+                    <button
+                      onClick={() => excluir(s.id)}
+                      className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium bg-red-600 hover:bg-red-700 text-white px-2 py-1.5 rounded-lg transition-colors"
+                    >
+                      Confirmar
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDelete(s.id)}
+                      className="flex items-center justify-center gap-1.5 text-xs font-medium bg-red-50 hover:bg-red-100 text-red-600 px-2 py-1.5 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
             ))}
           </div>
 
@@ -90,12 +163,20 @@ export default function SolicitacoesPage() {
           <div className="lg:col-span-3">
             {selecionada ? (
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
-                <div>
-                  <h2 className="text-lg font-bold text-gray-800">{selecionada.nome}</h2>
-                  <p className="text-sm text-gray-500">{selecionada.empresa}{selecionada.porte ? ` — ${selecionada.porte}` : ''}</p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Recebido em {format(new Date(selecionada.criadoEm), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
-                  </p>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-800">{selecionada.nome}</h2>
+                    <p className="text-sm text-gray-500">{selecionada.empresa}{selecionada.porte ? ` — ${selecionada.porte}` : ''}</p>
+                    <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {format(new Date(selecionada.criadoEm), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
+                    </p>
+                  </div>
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0 ${
+                    selecionada.lida ? 'bg-gray-100 text-gray-500' : 'bg-blue-100 text-blue-700'
+                  }`}>
+                    {selecionada.lida ? 'Lida' : 'Não lida'}
+                  </span>
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-3">
@@ -154,9 +235,9 @@ export default function SolicitacoesPage() {
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center text-gray-400 h-full flex flex-col items-center justify-center">
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center text-gray-400 h-full flex flex-col items-center justify-center min-h-[200px]">
                 <Inbox className="w-8 h-8 mb-3 text-gray-300" />
-                <p className="text-sm">Selecione uma solicitação para ver os detalhes</p>
+                <p className="text-sm">Clique em <strong>Ver</strong> em uma solicitação para ver os detalhes</p>
               </div>
             )}
           </div>

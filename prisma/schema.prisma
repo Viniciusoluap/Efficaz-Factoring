@@ -168,15 +168,16 @@ model Comunicacao {
 }
 
 model Solicitacao {
-  id          String   @id @default(cuid())
-  nome        String
-  empresa     String
-  email       String
-  telefone    String
-  porte       String?
-  servico     String?
-  mensagem    String?  @db.Text
-  criadoEm   DateTime @default(now())
+  id        String   @id @default(cuid())
+  nome      String
+  empresa   String
+  email     String
+  telefone  String
+  porte     String?
+  servico   String?
+  mensagem  String?  @db.Text
+  lida      Boolean  @default(false)
+  criadoEm  DateTime @default(now())
 
   @@map("solicitacoes")
 }
