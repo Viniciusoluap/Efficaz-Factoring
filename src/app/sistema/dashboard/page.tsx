@@ -132,7 +132,7 @@ export default async function DashboardPage() {
         <div className="lg:col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-gray-700 text-sm">Últimos Títulos</h3>
-            <a href="/sistema/titulos" className="text-xs text-blue-600 hover:underline">Ver todos</a>
+            <a href="/sistema/relatorios" className="text-xs text-blue-600 hover:underline">Ver todos</a>
           </div>
           <div className="space-y-2">
             {d.ultimosTitulos.length === 0 ? (
