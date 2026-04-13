@@ -167,6 +167,20 @@ model Comunicacao {
   @@map("comunicacoes")
 }
 
+model Solicitacao {
+  id          String   @id @default(cuid())
+  nome        String
+  empresa     String
+  email       String
+  telefone    String
+  porte       String?
+  servico     String?
+  mensagem    String?  @db.Text
+  criadoEm   DateTime @default(now())
+
+  @@map("solicitacoes")
+}
+
 model Configuracao {
   id               String   @id @default("default")
   taxaMinimaFiscal Decimal  @default(0.5)  @db.Decimal(8, 4)

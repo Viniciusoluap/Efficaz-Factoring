@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
+import { prisma } from '@/lib/prisma';
 
 const EMAIL_DESTINO = 'contato@grupoefficaz.com.br';
 
@@ -200,30 +201,46 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const transporter = criarTransporter();
-
-    // E-mail para a equipe Efficaz
-    await transporter.sendMail({
-      from: `"Site Efficaz Factoring" <${process.env.SMTP_USER}>`,
-      to: EMAIL_DESTINO,
-      replyTo: email,
-      subject: `Nova solicitação de análise – ${company}`,
-      html: htmlEmail({ name, company, email, phone, companyType, service, message }),
+    // Salva no banco de dados (sempre funciona)
+    await prisma.solicitacao.create({
+      data: {
+        nome: name,
+        empresa: company,
+        email,
+        telefone: phone,
+        porte: companyType || null,
+        servico: service || null,
+        mensagem: message || null,
+      },
     });
 
-    // E-mail de confirmação para o solicitante
-    await transporter.sendMail({
-      from: `"Efficaz Factoring" <${process.env.SMTP_USER}>`,
-      to: email,
-      subject: 'Recebemos sua solicitação – Efficaz Factoring',
-      html: htmlConfirmacao(name),
-    });
+    // Tenta enviar e-mail se SMTP estiver configurado (opcional)
+    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+      try {
+        const transporter = criarTransporter();
+        await transporter.sendMail({
+          from: `"Site Efficaz Factoring" <${process.env.SMTP_USER}>`,
+          to: EMAIL_DESTINO,
+          replyTo: email,
+          subject: `Nova solicitação de análise – ${company}`,
+          html: htmlEmail({ name, company, email, phone, companyType, service, message }),
+        });
+        await transporter.sendMail({
+          from: `"Efficaz Factoring" <${process.env.SMTP_USER}>`,
+          to: email,
+          subject: 'Recebemos sua solicitação – Efficaz Factoring',
+          html: htmlConfirmacao(name),
+        });
+      } catch (emailErr) {
+        console.error('[API /contato] Erro ao enviar e-mail (não crítico):', emailErr);
+      }
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error('[API /contato] Erro ao enviar e-mail:', error);
+    console.error('[API /contato] Erro:', error);
     return NextResponse.json(
-      { error: 'Erro ao enviar e-mail. Tente novamente.' },
+      { error: 'Erro ao registrar solicitação. Tente novamente.' },
       { status: 500 }
     );
   }
