@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { formatarMoeda } from '@/lib/calculos';
 import Link from 'next/link';
 import { Plus, Building2 } from 'lucide-react';
+import FornecedorAcoes from '@/components/sistema/FornecedorAcoes';
 
 export default async function FornecedoresPage() {
   const fornecedores = await prisma.fornecedor.findMany({
@@ -41,9 +42,12 @@ export default async function FornecedoresPage() {
                   <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600 font-bold text-sm">
                     {f.nome.charAt(0).toUpperCase()}
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${f.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                    {f.ativo ? 'Ativo' : 'Inativo'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${f.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                      {f.ativo ? 'Ativo' : 'Inativo'}
+                    </span>
+                    <FornecedorAcoes id={f.id} />
+                  </div>
                 </div>
                 <h3 className="font-semibold text-gray-800 text-sm">{f.nome}</h3>
                 <p className="text-xs text-gray-400 mb-3">{f.cpfCnpj} · {f.email}</p>
