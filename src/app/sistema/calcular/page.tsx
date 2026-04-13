@@ -5,42 +5,33 @@ import { calcularOperacao, calcularFiscal, formatarMoeda, formatarPorcentagem } 
 import { differenceInDays, format, addDays } from 'date-fns';
 import { Calculator, TrendingUp, ArrowRight, Info, Copy, CheckCheck } from 'lucide-react';
 
-const hoje = format(new Date(), 'yyyy-MM-dd');
-
 export default function CalcularPage() {
   const [valor, setValor] = useState('');
   const [taxaCliente, setTaxaCliente] = useState('');
   const [taxaFornecedor, setTaxaFornecedor] = useState('');
-  const [dataEmissao, setDataEmissao] = useState(hoje);
-  const [dataVencimento, setDataVencimento] = useState('');
-  const [prazoManual, setPrazoManual] = useState('');
+  // hoje calculado no cliente para evitar hydration mismatch
+  const [dataEmissao, setDataEmissao] = useState(() => format(new Date(), 'yyyy-MM-dd'));
+  const [prazo, setPrazo] = useState('30');
   const [resultado, setResultado] = useState<ReturnType<typeof calcularOperacao> | null>(null);
   const [fiscal, setFiscal] = useState<ReturnType<typeof calcularFiscal> | null>(null);
   const [erro, setErro] = useState('');
   const [copiado, setCopiado] = useState(false);
 
-  // Ao digitar prazo, atualiza vencimento
-  useEffect(() => {
-    if (prazoManual && dataEmissao) {
-      const dias = parseInt(prazoManual);
-      if (!isNaN(dias) && dias > 0) {
-        setDataVencimento(format(addDays(new Date(dataEmissao), dias), 'yyyy-MM-dd'));
-      }
+  // Vencimento calculado automaticamente
+  const dataVencimento = (() => {
+    const dias = parseInt(prazo);
+    if (!isNaN(dias) && dias > 0 && dataEmissao) {
+      try { return format(addDays(new Date(dataEmissao + 'T00:00:00'), dias), 'yyyy-MM-dd'); }
+      catch { return ''; }
     }
-  }, [prazoManual, dataEmissao]);
-
-  // Ao mudar vencimento, atualiza prazo
-  useEffect(() => {
-    if (dataVencimento && dataEmissao) {
-      const d = differenceInDays(new Date(dataVencimento), new Date(dataEmissao));
-      if (d > 0) setPrazoManual(String(d));
-    }
-  }, [dataVencimento]);
+    return '';
+  })();
 
   const calcular = () => {
     setErro('');
     try {
-      if (!valor || !taxaCliente || !taxaFornecedor || !dataEmissao || !dataVencimento) {
+      const dias = parseInt(prazo);
+      if (!valor || !taxaCliente || !taxaFornecedor || !dataEmissao || isNaN(dias) || dias < 1) {
         setErro('Preencha todos os campos obrigatórios.');
         return;
       }
@@ -48,8 +39,8 @@ export default function CalcularPage() {
         valor: parseFloat(valor),
         taxaCliente: parseFloat(taxaCliente),
         taxaFornecedor: parseFloat(taxaFornecedor),
-        dataEmissao: new Date(dataEmissao),
-        dataVencimento: new Date(dataVencimento),
+        dataEmissao: new Date(dataEmissao + 'T00:00:00'),
+        dataVencimento: new Date(dataVencimento + 'T00:00:00'),
       });
       setResultado(r);
       setFiscal(calcularFiscal(r, parseFloat(valor), r.prazo));
@@ -78,30 +69,40 @@ export default function CalcularPage() {
           Dados da Operação
         </h2>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
-          <div>
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="col-span-2 sm:col-span-1">
             <label className="block text-xs font-semibold text-gray-600 mb-1">Valor (R$) *</label>
-            <input type="number" step="0.01" min="0" className={inputCls} value={valor} onChange={e => setValor(e.target.value)} placeholder="10.000,00" />
+            <input type="number" step="0.01" min="0" className={inputCls} value={valor}
+              onChange={e => setValor(e.target.value)} placeholder="10000.00" />
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1">Taxa Cliente (% a.m.) *</label>
-            <input type="number" step="0.01" min="0" className={inputCls} value={taxaCliente} onChange={e => setTaxaCliente(e.target.value)} placeholder="3.50" />
+            <input type="number" step="0.01" min="0" className={inputCls} value={taxaCliente}
+              onChange={e => setTaxaCliente(e.target.value)} placeholder="3.50" />
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1">Taxa Fornecedor (% a.m.) *</label>
-            <input type="number" step="0.01" min="0" className={inputCls} value={taxaFornecedor} onChange={e => setTaxaFornecedor(e.target.value)} placeholder="1.80" />
+            <input type="number" step="0.01" min="0" className={inputCls} value={taxaFornecedor}
+              onChange={e => setTaxaFornecedor(e.target.value)} placeholder="1.80" />
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1">Data de Emissão *</label>
-            <input type="date" className={inputCls} value={dataEmissao} onChange={e => setDataEmissao(e.target.value)} />
+            <input type="date" className={inputCls} value={dataEmissao}
+              onChange={e => { if (e.target.value) setDataEmissao(e.target.value); }}
+              onInput={e => { const v = (e.target as HTMLInputElement).value; if (v) setDataEmissao(v); }} />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Prazo (dias)</label>
-            <input type="number" min="1" className={inputCls} value={prazoManual} onChange={e => setPrazoManual(e.target.value)} placeholder="30" />
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Prazo (dias) *</label>
+            <input type="number" inputMode="numeric" min="1" max="9999" className={inputCls}
+              value={prazo} onChange={e => setPrazo(e.target.value)} placeholder="30" />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Data de Vencimento *</label>
-            <input type="date" className={inputCls} value={dataVencimento} min={dataEmissao} onChange={e => setDataVencimento(e.target.value)} />
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Vencimento (calculado)</label>
+            <div className={`${inputCls} bg-gray-100 cursor-default text-gray-500`}>
+              {dataVencimento
+                ? format(new Date(dataVencimento + 'T00:00:00'), 'dd/MM/yyyy')
+                : '—'}
+            </div>
           </div>
         </div>
 

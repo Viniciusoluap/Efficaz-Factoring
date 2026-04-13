@@ -11,8 +11,6 @@ export async function GET() {
 export async function PUT(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
-  const perfil = (session.user as any)?.perfil;
-  if (perfil !== 'ADMIN') return NextResponse.json({ error: 'Apenas administradores.' }, { status: 403 });
 
   const { nomeEmpresa, cnpj, emailSistema, taxaMinimaFiscal, aliquotaImposto } = await req.json();
 
