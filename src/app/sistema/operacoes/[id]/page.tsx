@@ -4,11 +4,15 @@ import { TituloStatus, TituloTipo } from '@prisma/client';
 import { format } from 'date-fns';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, FileText, Layers } from 'lucide-react';
+import { ArrowLeft, FileText, Layers, Plus } from 'lucide-react';
+import OperacaoStatusBtn from '@/components/sistema/OperacaoStatusBtn';
+import OperacaoAcoes from '@/components/sistema/OperacaoAcoes';
+import TituloNaOperacaoAcoes from '@/components/sistema/TituloNaOperacaoAcoes';
+import AlterarStatusBtn from '@/components/sistema/AlterarStatusBtn';
 
 const statusLabel: Record<TituloStatus, string> = {
   PENDENTE: 'Pendente', APROVADO: 'Aprovado', VENCIDO: 'Vencido',
-  LIQUIDADO: 'Liquidado', PROTESTADO: 'Protestado', CANCELADO: 'Cancelado',
+  LIQUIDADO: 'Pago', PROTESTADO: 'Protestado', CANCELADO: 'Cancelado',
 };
 const statusCor: Record<TituloStatus, string> = {
   PENDENTE: 'bg-amber-100 text-amber-700 border-amber-200',
@@ -27,21 +31,13 @@ const tipoCor: Record<TituloTipo, string> = {
   PROMISSORIA: 'bg-rose-50 text-rose-600',
 };
 
-function opStatusInfo(status: string) {
-  if (status === 'CONCLUIDA') return { label: 'Concluída', cls: 'bg-green-100 text-green-700 border-green-200' };
-  if (status === 'CANCELADA') return { label: 'Cancelada', cls: 'bg-gray-100 text-gray-500 border-gray-200' };
-  return { label: 'Aberta', cls: 'bg-blue-100 text-blue-700 border-blue-200' };
-}
-
 export default async function OperacaoDetalhePage({ params }: { params: { id: string } }) {
   const operacao = await prisma.operacao.findUnique({
     where: { id: params.id },
     include: {
       cliente: true,
       fornecedor: true,
-      titulos: {
-        orderBy: { criadoEm: 'asc' },
-      },
+      titulos: { orderBy: { criadoEm: 'asc' } },
     },
   });
 
@@ -59,31 +55,96 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
     { valor: 0, encargo: 0, liquidoCliente: 0, spreadBruto: 0, spreadLiquido: 0, imposto: 0 }
   );
 
-  const { label: sLabel, cls: sCls } = opStatusInfo(operacao.status);
+  const isPaga = operacao.status === 'PAGA';
+  const opStatusLabel = isPaga ? 'Paga' : 'Pendente';
+  const opStatusCls = isPaga
+    ? 'bg-green-100 text-green-700 border-green-200'
+    : 'bg-amber-100 text-amber-700 border-amber-200';
+
+  // Serialise data for client components
+  const operacaoPDF = {
+    numero: operacao.numero,
+    taxaCliente: Number(operacao.taxaCliente),
+    taxaFornecedor: Number(operacao.taxaFornecedor),
+    clienteNome: operacao.cliente?.nome,
+    fornecedorNome: operacao.fornecedor?.nome,
+    criadoEm: format(new Date(operacao.criadoEm), "dd/MM/yyyy 'às' HH:mm"),
+  };
+
+  const titulosPDF = operacao.titulos.map(t => ({
+    numero: t.numero,
+    tipo: t.tipo,
+    emitenteNome: t.emitenteNome,
+    emitenteCpfCnpj: t.emitenteCpfCnpj,
+    sacadoNome: t.sacadoNome,
+    sacadoCpfCnpj: t.sacadoCpfCnpj,
+    dataEmissao: format(new Date(t.dataEmissao), 'dd/MM/yyyy'),
+    dataVencimento: format(new Date(t.dataVencimento), 'dd/MM/yyyy'),
+    prazo: t.prazo,
+    valor: Number(t.valor),
+    taxaCliente: Number(t.taxaCliente),
+    encargo: Number(t.encargo),
+    valorLiquidoCliente: Number(t.valorLiquidoCliente),
+  }));
+
+  const titulosXLS = operacao.titulos.map(t => ({
+    numero: t.numero,
+    tipo: t.tipo,
+    status: t.status,
+    emitenteNome: t.emitenteNome,
+    emitenteCpfCnpj: t.emitenteCpfCnpj,
+    sacadoNome: t.sacadoNome,
+    sacadoCpfCnpj: t.sacadoCpfCnpj,
+    dataEmissao: format(new Date(t.dataEmissao), 'dd/MM/yyyy'),
+    dataVencimento: format(new Date(t.dataVencimento), 'dd/MM/yyyy'),
+    prazo: t.prazo,
+    valor: Number(t.valor),
+    taxaCliente: Number(t.taxaCliente),
+    taxaFornecedor: Number(t.taxaFornecedor),
+    encargo: Number(t.encargo),
+    valorLiquidoCliente: Number(t.valorLiquidoCliente),
+    custoCedente: Number(t.custoCedente),
+    spreadBruto: Number(t.spreadBruto),
+    spreadLiquido: Number(t.spreadLiquido ?? 0),
+    impostoProvisao: Number(t.impostoProvisao ?? 0),
+    clienteNome: operacao.cliente?.nome,
+    fornecedorNome: operacao.fornecedor?.nome,
+  }));
 
   return (
     <div className="max-w-5xl space-y-5">
       {/* Breadcrumb */}
-      <Link href="/sistema/titulos" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
-        <ArrowLeft className="w-4 h-4" /> Voltar para Operações
-      </Link>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <Link href="/sistema/titulos" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
+          <ArrowLeft className="w-4 h-4" /> Voltar para Operações
+        </Link>
+        <OperacaoAcoes
+          operacao={operacaoPDF}
+          titulosPDF={titulosPDF}
+          titulosXLS={titulosXLS}
+          operacaoId={operacao.id}
+        />
+      </div>
 
       {/* Header */}
       <div className="bg-gradient-to-br from-slate-900 to-blue-950 rounded-2xl p-6 text-white">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-3 mb-2 flex-wrap">
               <span className="text-xs bg-white/10 px-2.5 py-1 rounded-lg font-medium flex items-center gap-1.5">
                 <Layers className="w-3 h-3" /> Operação
               </span>
-              <span className={`text-xs px-2.5 py-1 rounded-full border font-medium ${sCls}`}>
-                {sLabel}
+              <span className={`text-xs px-2.5 py-1 rounded-full border font-medium ${opStatusCls}`}>
+                {opStatusLabel}
               </span>
             </div>
             <h1 className="text-2xl font-bold">{operacao.numero}</h1>
             <p className="text-white/50 text-sm mt-1">
               Criada em {format(new Date(operacao.criadoEm), 'dd/MM/yyyy')} · {operacao.titulos.length} título{operacao.titulos.length !== 1 ? 's' : ''}
             </p>
+            <div className="mt-3">
+              <OperacaoStatusBtn operacaoId={operacao.id} statusAtual={operacao.status} />
+            </div>
           </div>
           <div className="text-right">
             <p className="text-3xl font-bold text-amber-400">{formatarMoeda(totais.valor)}</p>
@@ -126,78 +187,90 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
 
       {/* Tabela de títulos */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-100 flex items-center gap-2">
-          <FileText className="w-4 h-4 text-blue-600" />
-          <h3 className="font-semibold text-gray-700 text-sm">Títulos desta Operação</h3>
+        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FileText className="w-4 h-4 text-blue-600" />
+            <h3 className="font-semibold text-gray-700 text-sm">Títulos desta Operação</h3>
+          </div>
+          <Link
+            href="/sistema/titulos/novo"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" /> Adicionar Título
+          </Link>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50 text-left">
-                {['Tipo', 'Número', 'Emissor', 'Vencimento', 'Valor', 'Encargo', 'Líquido', 'Spread', 'Status', ''].map(h => (
-                  <th key={h} className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {operacao.titulos.map((t) => (
-                <tr key={t.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-1 rounded-lg font-medium ${tipoCor[t.tipo]}`}>
-                      {tipoLabel[t.tipo]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-gray-600">{t.numero}</td>
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-gray-700 text-xs">{t.emitenteNome}</p>
-                    <p className="text-gray-400 text-xs">{t.emitenteCpfCnpj}</p>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600 text-xs">
-                    {format(new Date(t.dataVencimento), 'dd/MM/yyyy')}
-                    <p className="text-gray-400">{t.prazo}d</p>
-                  </td>
-                  <td className="px-4 py-3 font-semibold text-gray-800 text-xs">
-                    {formatarMoeda(Number(t.valor))}
-                  </td>
-                  <td className="px-4 py-3 text-amber-600 font-medium text-xs">
-                    {formatarMoeda(Number(t.encargo))}
-                  </td>
-                  <td className="px-4 py-3 text-blue-600 font-medium text-xs">
-                    {formatarMoeda(Number(t.valorLiquidoCliente))}
-                  </td>
-                  <td className="px-4 py-3 text-green-600 font-medium text-xs">
-                    {formatarMoeda(Number(t.spreadBruto))}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs px-2.5 py-1 rounded-full border font-medium ${statusCor[t.status]}`}>
-                      {statusLabel[t.status]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/sistema/titulos/${t.id}`}
-                      className="text-xs text-blue-600 hover:underline font-medium"
-                    >
-                      Ver
-                    </Link>
-                  </td>
+        {operacao.titulos.length === 0 ? (
+          <div className="py-12 text-center">
+            <FileText className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+            <p className="text-gray-400 text-sm">Nenhum título nesta operação.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 text-left">
+                  {['Tipo', 'Número', 'Emissor', 'Vencimento', 'Valor', 'Encargo', 'Líquido', 'Spread', 'Status', ''].map(h => (
+                    <th key={h} className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-            {/* Totais da tabela */}
-            <tfoot>
-              <tr className="bg-gray-50 font-semibold">
-                <td colSpan={4} className="px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">Total</td>
-                <td className="px-4 py-3 text-xs text-gray-800 font-bold">{formatarMoeda(totais.valor)}</td>
-                <td className="px-4 py-3 text-xs text-amber-600 font-bold">{formatarMoeda(totais.encargo)}</td>
-                <td className="px-4 py-3 text-xs text-blue-600 font-bold">{formatarMoeda(totais.liquidoCliente)}</td>
-                <td className="px-4 py-3 text-xs text-green-600 font-bold">{formatarMoeda(totais.spreadBruto)}</td>
-                <td colSpan={2} />
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {operacao.titulos.map((t) => (
+                  <tr key={t.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-4 py-3">
+                      <span className={`text-xs px-2 py-1 rounded-lg font-medium ${tipoCor[t.tipo]}`}>
+                        {tipoLabel[t.tipo]}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs text-gray-600">{t.numero}</td>
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-gray-700 text-xs">{t.emitenteNome}</p>
+                      <p className="text-gray-400 text-xs">{t.emitenteCpfCnpj}</p>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 text-xs whitespace-nowrap">
+                      {format(new Date(t.dataVencimento), 'dd/MM/yyyy')}
+                      <p className="text-gray-400">{t.prazo}d</p>
+                    </td>
+                    <td className="px-4 py-3 font-semibold text-gray-800 text-xs whitespace-nowrap">
+                      {formatarMoeda(Number(t.valor))}
+                    </td>
+                    <td className="px-4 py-3 text-amber-600 font-medium text-xs whitespace-nowrap">
+                      {formatarMoeda(Number(t.encargo))}
+                    </td>
+                    <td className="px-4 py-3 text-blue-600 font-medium text-xs whitespace-nowrap">
+                      {formatarMoeda(Number(t.valorLiquidoCliente))}
+                    </td>
+                    <td className="px-4 py-3 text-green-600 font-medium text-xs whitespace-nowrap">
+                      {formatarMoeda(Number(t.spreadBruto))}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs px-2.5 py-1 rounded-full border font-medium whitespace-nowrap ${statusCor[t.status]}`}>
+                        {statusLabel[t.status]}
+                      </span>
+                      <div className="mt-1">
+                        <AlterarStatusBtn tituloId={t.id} statusAtual={t.status} />
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <TituloNaOperacaoAcoes tituloId={t.id} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-gray-50 font-semibold">
+                  <td colSpan={4} className="px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">Total</td>
+                  <td className="px-4 py-3 text-xs text-gray-800 font-bold">{formatarMoeda(totais.valor)}</td>
+                  <td className="px-4 py-3 text-xs text-amber-600 font-bold">{formatarMoeda(totais.encargo)}</td>
+                  <td className="px-4 py-3 text-xs text-blue-600 font-bold">{formatarMoeda(totais.liquidoCliente)}</td>
+                  <td className="px-4 py-3 text-xs text-green-600 font-bold">{formatarMoeda(totais.spreadBruto)}</td>
+                  <td colSpan={2} />
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
       </div>
 
       {operacao.observacoes && (

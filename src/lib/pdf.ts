@@ -313,3 +313,280 @@ export async function gerarContratoPDF(dados: DadosTitulo) {
 
   doc.save(`contrato-${dados.numero}.pdf`);
 }
+
+// ─── CONTRATO DE OPERAÇÃO (múltiplos títulos) ─────────────────────────────────
+
+export type TituloOperacaoPDF = {
+  numero: string;
+  tipo: string;
+  emitenteNome: string;
+  emitenteCpfCnpj: string;
+  sacadoNome: string;
+  sacadoCpfCnpj: string;
+  dataEmissao: string;    // dd/MM/yyyy
+  dataVencimento: string; // dd/MM/yyyy
+  prazo: number;
+  valor: number;
+  taxaCliente: number;
+  encargo: number;
+  valorLiquidoCliente: number;
+};
+
+export type OperacaoPDF = {
+  numero: string;
+  taxaCliente: number;
+  taxaFornecedor: number;
+  clienteNome?: string;
+  fornecedorNome?: string;
+  criadoEm: string; // dd/MM/yyyy HH:mm
+};
+
+export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: TituloOperacaoPDF[]) {
+  if (!titulos.length) return;
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const L = 18;
+  const W = 174;
+  let y = 0;
+
+  const totalValor = titulos.reduce((s, t) => s + t.valor, 0);
+  const totalEncargo = titulos.reduce((s, t) => s + t.encargo, 0);
+  const totalLiquido = titulos.reduce((s, t) => s + t.valorLiquidoCliente, 0);
+
+  // Usa o primeiro título como representante para emitente/sacado
+  const t0 = titulos[0];
+
+  // ── CABEÇALHO ───────────────────────────────────────────────────
+  doc.setFillColor(15, 23, 42);
+  doc.rect(0, 0, 210, 32, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(15);
+  doc.setFont('helvetica', 'bold');
+  doc.text(EMPRESA.fantasia.toUpperCase(), L, 13);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(160, 175, 210);
+  doc.text('CONTRATO DE FOMENTO MERCANTIL E CESSÃO DE CRÉDITOS', L, 20);
+  doc.text(`CNPJ ${EMPRESA.cnpj}  ·  ${EMPRESA.email}`, L, 26);
+
+  y = 42;
+
+  // ── TÍTULO ──────────────────────────────────────────────────────
+  doc.setTextColor(15, 23, 42);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text('CONTRATO DE FOMENTO MERCANTIL', 105, y, { align: 'center' });
+  y += 5;
+  doc.text('E CESSÃO DE CRÉDITOS — OPERAÇÃO', 105, y, { align: 'center' });
+  y += 7;
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 100, 130);
+  doc.text(`Operação Nº ${operacao.numero}  ·  Gerado em ${operacao.criadoEm}  ·  ${titulos.length} título(s)`, 105, y, { align: 'center' });
+  y += 5;
+  doc.setDrawColor(200, 210, 230);
+  doc.setLineWidth(0.4);
+  doc.line(L, y, 210 - L, y);
+  y += 8;
+
+  // ── IDENTIFICAÇÃO DAS PARTES ─────────────────────────────────────
+  y = secao(doc, 'IDENTIFICAÇÃO DAS PARTES', y, L);
+  y = paragrafo(doc,
+    `CESSIONÁRIA: ${EMPRESA.razaoSocial}, pessoa jurídica de direito privado, inscrita no CNPJ/MF sob o nº ${EMPRESA.cnpj}, com sede na ${EMPRESA.endereco}, ${EMPRESA.cidade}, ${EMPRESA.cep}, doravante denominada simplesmente "CESSIONÁRIA".`,
+    y, L, W);
+  y = paragrafo(doc,
+    `CEDENTE: ${t0.emitenteNome}, inscrito(a) no CPF/CNPJ sob o nº ${t0.emitenteCpfCnpj}, doravante denominado(a) simplesmente "CEDENTE".`,
+    y, L, W);
+  if (titulos.some(t => t.sacadoNome !== t0.sacadoNome)) {
+    y = paragrafo(doc,
+      `DEVEDORES / SACADOS: conforme discriminado na tabela de títulos abaixo.`,
+      y, L, W);
+  } else {
+    y = paragrafo(doc,
+      `DEVEDOR / SACADO: ${t0.sacadoNome}, inscrito(a) no CPF/CNPJ sob o nº ${t0.sacadoCpfCnpj}, doravante denominado(a) simplesmente "DEVEDOR".`,
+      y, L, W);
+  }
+  if (operacao.clienteNome) {
+    y = paragrafo(doc, `CLIENTE CUSTODIANTE: ${operacao.clienteNome}.`, y, L, W);
+  }
+  if (operacao.fornecedorNome) {
+    y = paragrafo(doc, `FORNECEDOR DE CAPITAL: ${operacao.fornecedorNome}.`, y, L, W);
+  }
+
+  // ── CLÁUSULA 1ª ─────────────────────────────────────────────────
+  y = secao(doc, 'CLÁUSULA PRIMEIRA – DO OBJETO E DA NATUREZA JURÍDICA', y, L);
+  y = paragrafo(doc,
+    `1.1. O presente instrumento tem por objeto a compra e venda mercantil dos títulos de crédito listados na Cláusula Segunda, com a consequente cessão definitiva e irrevogável, pelo CEDENTE à CESSIONÁRIA, dos créditos ali especificados, nos termos dos arts. 286 a 298 do Código Civil Brasileiro (Lei nº 10.406/2002) e em conformidade com a Resolução CMN nº 2.144/1995, que regulamenta as atividades das sociedades de fomento mercantil.`,
+    y, L, W);
+  y = paragrafo(doc,
+    `1.2. A presente operação caracteriza-se como fomento mercantil (factoring), modalidade "convencional", consistindo na aquisição de créditos oriundos de transações mercantis, com pagamento à vista do valor líquido acordado e assunção, pela CESSIONÁRIA, dos riscos de inadimplência dos DEVEDORES, ressalvadas as hipóteses de co-obrigação previstas neste contrato.`,
+    y, L, W);
+
+  // ── CLÁUSULA 2ª — CRÉDITOS CEDIDOS ──────────────────────────────
+  y = secao(doc, 'CLÁUSULA SEGUNDA – DOS CRÉDITOS CEDIDOS E DAS CONDIÇÕES FINANCEIRAS', y, L);
+  y = paragrafo(doc,
+    `2.1. Os créditos objeto desta cessão são representados pelos títulos de crédito abaixo discriminados, totalizando o valor nominal bruto de ${R(totalValor)}, com taxa de cessão (fator de compra) de ${operacao.taxaCliente.toFixed(4)}% ao mês, encargos totais de ${R(totalEncargo)} e valor líquido a ser pago ao CEDENTE de ${R(totalLiquido)}.`,
+    y, L, W);
+
+  const r1 = addPage(doc, y + 10);
+  y = r1.y;
+
+  autoTable(doc, {
+    startY: y,
+    margin: { left: L, right: L },
+    head: [['Nº Título', 'Tipo', 'Emitente', 'Sacado', 'Vencimento', 'Prazo', 'Valor', 'Encargo', 'Líquido']],
+    body: titulos.map(t => [
+      t.numero,
+      t.tipo,
+      `${t.emitenteNome}\n${t.emitenteCpfCnpj}`,
+      `${t.sacadoNome}\n${t.sacadoCpfCnpj}`,
+      t.dataVencimento,
+      `${t.prazo}d`,
+      R(t.valor),
+      R(t.encargo),
+      R(t.valorLiquidoCliente),
+    ]),
+    foot: [['TOTAL', '', '', '', '', '', R(totalValor), R(totalEncargo), R(totalLiquido)]],
+    styles: { fontSize: 7.5, cellPadding: 2.5 },
+    headStyles: { fillColor: [15, 23, 42], textColor: 255, fontStyle: 'bold', fontSize: 7.5 },
+    footStyles: { fillColor: [230, 235, 245], textColor: [15, 23, 42], fontStyle: 'bold', fontSize: 7.5 },
+    alternateRowStyles: { fillColor: [245, 248, 255] },
+    columnStyles: {
+      0: { cellWidth: 20 },
+      1: { cellWidth: 16 },
+      2: { cellWidth: 32 },
+      3: { cellWidth: 32 },
+      4: { cellWidth: 18 },
+      5: { cellWidth: 10, halign: 'right' },
+      6: { cellWidth: 18, halign: 'right' },
+      7: { cellWidth: 18, halign: 'right' },
+      8: { cellWidth: 18, halign: 'right' },
+    },
+  });
+
+  y = (doc as any).lastAutoTable.finalY + 6;
+
+  y = paragrafo(doc,
+    `2.2. O valor líquido total de ${R(totalLiquido)} será pago ao CEDENTE em até 1 (um) dia útil contado da assinatura deste instrumento e da entrega física ou digital dos títulos, mediante transferência bancária para conta de titularidade do CEDENTE previamente informada.`,
+    y, L, W);
+
+  // ── CLÁUSULA 3ª ─────────────────────────────────────────────────
+  y = secao(doc, 'CLÁUSULA TERCEIRA – DAS DECLARAÇÕES E GARANTIAS DO CEDENTE', y, L);
+  const garantias = [
+    '3.1. O CEDENTE declara, sob as penas da lei, que os créditos cedidos são de sua exclusiva titularidade, originados de legítimas transações comerciais já concluídas e que os bens ou serviços correspondentes foram efetivamente entregues ou prestados aos DEVEDORES.',
+    '3.2. O CEDENTE garante que os títulos cedidos não estão sujeitos a qualquer ônus, gravame, penhora, alienação fiduciária, arresto, sequestro, garantia pignoratícia ou qualquer outra restrição que impeça ou comprometa a cessão ora realizada.',
+    '3.3. O CEDENTE declara que não existe contra si qualquer ação judicial, procedimento administrativo ou arbitral que possa afetar a validade ou a exigibilidade dos créditos cedidos.',
+    '3.4. O CEDENTE afirma que os títulos são legítimos, verdadeiros e que as assinaturas neles apostas são autênticas, respondendo civil e criminalmente em caso de falsidade (CP, arts. 171 e 297).',
+    '3.5. O CEDENTE garante a existência e a liquidez dos créditos cedidos, nos termos do art. 295 do Código Civil, respondendo pela evicção em caso de redução, extinção ou ineficácia dos créditos por fato anterior à cessão.',
+  ];
+  for (const g of garantias) { y = paragrafo(doc, g, y, L, W); }
+
+  // ── CLÁUSULA 4ª ─────────────────────────────────────────────────
+  y = secao(doc, 'CLÁUSULA QUARTA – DA CO-OBRIGAÇÃO E RESPONSABILIDADE DO CEDENTE', y, L);
+  y = paragrafo(doc,
+    '4.1. Sem prejuízo do caráter pro soluto desta cessão quanto ao risco de crédito ordinário dos DEVEDORES, o CEDENTE assume co-obrigação solidária e irretratável em relação aos créditos cedidos nas seguintes hipóteses:',
+    y, L, W);
+  const coobrig = [
+    'a) Comprovada inexistência, nulidade, anulabilidade ou falsidade de qualquer título cedido;',
+    'b) Recusa de pagamento pelo DEVEDOR fundamentada em vício, defeito ou inexistência da operação que originou o título;',
+    'c) Qualquer fato anterior à cessão que torne o crédito inexigível, de valor inferior ao declarado ou juridicamente ineficaz;',
+    'd) Descumprimento de qualquer declaração ou garantia prestada na Cláusula Terceira deste instrumento.',
+  ];
+  for (const c of coobrig) { y = paragrafo(doc, c, y, L + 5, W - 5); }
+  y = paragrafo(doc,
+    `4.2. Nas hipóteses do item 4.1, o CEDENTE obriga-se a restituir à CESSIONÁRIA o valor integral pago, acrescido de multa de 10% (dez por cento), juros de mora de 1% (um por cento) ao mês e correção monetária pelo IPCA, a contar da data do pagamento.`,
+    y, L, W);
+
+  // ── CLÁUSULA 5ª ─────────────────────────────────────────────────
+  y = secao(doc, 'CLÁUSULA QUINTA – DO INADIMPLEMENTO DOS DEVEDORES', y, L);
+  y = paragrafo(doc,
+    '5.1. Ressalvadas as hipóteses da Cláusula Quarta, o risco do inadimplemento ordinário dos DEVEDORES é assumido integralmente pela CESSIONÁRIA, não podendo a CESSIONÁRIA voltar-se contra o CEDENTE pela mera falta de pagamento na data do vencimento.',
+    y, L, W);
+  y = paragrafo(doc,
+    '5.2. Em caso de inadimplemento de qualquer DEVEDOR, a CESSIONÁRIA adotará as medidas de cobrança extrajudicial e judicial que entender cabíveis, incluindo o protesto do título (Lei nº 9.492/1997) e demais providências legais.',
+    y, L, W);
+
+  // ── CLÁUSULA 6ª ─────────────────────────────────────────────────
+  y = secao(doc, 'CLÁUSULA SEXTA – DOS ENCARGOS MORATÓRIOS', y, L);
+  y = paragrafo(doc,
+    '6.1. O inadimplemento de qualquer obrigação pecuniária prevista neste contrato sujeitará a parte devedora ao pagamento de: (i) multa moratória de 2% (dois por cento) sobre o valor devido; (ii) juros de mora de 1% (um por cento) ao mês, pro rata die; e (iii) correção monetária pelo índice IPCA/IBGE.',
+    y, L, W);
+
+  // ── CLÁUSULA 7ª ─────────────────────────────────────────────────
+  y = secao(doc, 'CLÁUSULA SÉTIMA – DAS DISPOSIÇÕES GERAIS E DO FORO', y, L);
+  const gerais = [
+    '7.1. Este contrato é celebrado em caráter irrevogável e irretratável, obrigando as partes e seus sucessores a qualquer título.',
+    '7.2. A tolerância de qualquer das partes quanto ao descumprimento de obrigação pela outra não implica novação, renúncia ou alteração das condições aqui estabelecidas.',
+    '7.3. A eventual nulidade ou ineficácia de qualquer cláusula deste contrato não compromete a validade das demais, que continuarão em pleno vigor.',
+    '7.4. As partes elegem a assinatura digital com certificado ICP-Brasil ou assinatura eletrônica com validade legal como forma equivalente à assinatura manuscrita, nos termos da Lei nº 14.063/2020.',
+    `7.5. As partes elegem, de forma irrevogável, o foro da ${EMPRESA.foro}, com renúncia expressa a qualquer outro, por mais privilegiado que seja, para dirimir quaisquer questões oriundas deste contrato.`,
+  ];
+  for (const g of gerais) { y = paragrafo(doc, g, y, L, W); }
+
+  // ── ASSINATURAS ─────────────────────────────────────────────────
+  const r2 = addPage(doc, y + 40);
+  y = r2.y + 8;
+
+  doc.setDrawColor(180, 190, 210);
+  doc.setLineWidth(0.3);
+  doc.line(L, y, 210 - L, y);
+  y += 7;
+
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(60, 60, 80);
+  doc.text(`Imperatriz – MA, _____ de __________________________ de 20_____`, L, y);
+  y += 14;
+
+  doc.line(L, y, L + 78, y);
+  doc.line(112, y, 112 + 78, y);
+  y += 5;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.text(EMPRESA.razaoSocial, L, y, { maxWidth: 78 });
+  doc.text(t0.emitenteNome, 112, y, { maxWidth: 78 });
+  y += 4;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(110, 110, 130);
+  doc.text(`CNPJ: ${EMPRESA.cnpj}`, L, y);
+  doc.text(`CPF/CNPJ: ${t0.emitenteCpfCnpj}`, 112, y);
+  y += 4;
+  doc.text('CESSIONÁRIA', L, y);
+  doc.text('CEDENTE', 112, y);
+  y += 12;
+
+  doc.setTextColor(100, 100, 120);
+  doc.setFontSize(7.5);
+  doc.text('Testemunha 1:', L, y);
+  doc.text('Testemunha 2:', 112, y);
+  y += 4;
+  doc.line(L, y, L + 78, y);
+  doc.line(112, y, 112 + 78, y);
+  y += 4;
+  doc.text('Nome: _________________________________', L, y);
+  doc.text('Nome: _________________________________', 112, y);
+  y += 4;
+  doc.text('CPF: __________________________________', L, y);
+  doc.text('CPF: __________________________________', 112, y);
+
+  // ── RODAPÉ ──────────────────────────────────────────────────────
+  const totalPags = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPags; i++) {
+    doc.setPage(i);
+    doc.setFillColor(15, 23, 42);
+    doc.rect(0, 284, 210, 13, 'F');
+    doc.setFontSize(6.5);
+    doc.setTextColor(160, 175, 210);
+    doc.text(
+      `${EMPRESA.razaoSocial}  ·  CNPJ ${EMPRESA.cnpj}  ·  ${EMPRESA.endereco}, ${EMPRESA.cidade}  ·  ${EMPRESA.email}`,
+      105, 289, { align: 'center' });
+    doc.text(
+      `Operação Nº ${operacao.numero}  —  Página ${i} de ${totalPags}`,
+      105, 294, { align: 'center' });
+  }
+
+  doc.save(`contrato-operacao-${operacao.numero}.pdf`);
+}

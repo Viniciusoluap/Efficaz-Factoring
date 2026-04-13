@@ -6,11 +6,8 @@ import { ChevronDown } from 'lucide-react';
 
 const statusOpcoes = [
   { value: 'PENDENTE', label: 'Pendente' },
-  { value: 'APROVADO', label: 'Aprovado' },
-  { value: 'LIQUIDADO', label: 'Liquidado' },
+  { value: 'LIQUIDADO', label: 'Pago' },
   { value: 'VENCIDO', label: 'Vencido' },
-  { value: 'PROTESTADO', label: 'Protestado' },
-  { value: 'CANCELADO', label: 'Cancelado' },
 ];
 
 export default function AlterarStatusBtn({
@@ -22,6 +19,9 @@ export default function AlterarStatusBtn({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+
+  // Map existing statuses not in the simplified list to display correctly
+  const valorAtual = ['PENDENTE', 'LIQUIDADO', 'VENCIDO'].includes(statusAtual) ? statusAtual : 'PENDENTE';
 
   const alterar = async (novoStatus: string) => {
     if (novoStatus === statusAtual) return;
@@ -36,9 +36,9 @@ export default function AlterarStatusBtn({
   };
 
   return (
-    <div className="mt-3 relative">
+    <div className="relative inline-block">
       <select
-        value={statusAtual}
+        value={valorAtual}
         onChange={(e) => alterar(e.target.value)}
         disabled={loading}
         className="appearance-none bg-white/10 border border-white/20 text-white text-xs font-medium px-3 py-1.5 rounded-lg pr-7 cursor-pointer hover:bg-white/20 transition-colors disabled:opacity-60"

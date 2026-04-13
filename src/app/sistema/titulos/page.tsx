@@ -6,18 +6,6 @@ import Link from 'next/link';
 import { Plus, FileText, Layers, ChevronRight } from 'lucide-react';
 import ExportarTitulosBtn from '@/components/sistema/ExportarTitulosBtn';
 
-const statusLabel: Record<TituloStatus, string> = {
-  PENDENTE: 'Pendente', APROVADO: 'Aprovado', VENCIDO: 'Vencido',
-  LIQUIDADO: 'Liquidado', PROTESTADO: 'Protestado', CANCELADO: 'Cancelado',
-};
-const statusCor: Record<TituloStatus, string> = {
-  PENDENTE: 'bg-amber-100 text-amber-700 border-amber-200',
-  APROVADO: 'bg-green-100 text-green-700 border-green-200',
-  VENCIDO: 'bg-red-100 text-red-700 border-red-200',
-  LIQUIDADO: 'bg-blue-100 text-blue-700 border-blue-200',
-  PROTESTADO: 'bg-purple-100 text-purple-700 border-purple-200',
-  CANCELADO: 'bg-gray-100 text-gray-500 border-gray-200',
-};
 const tipoLabel: Record<TituloTipo, string> = {
   CHEQUE: 'Cheque', BOLETO: 'Boleto', PROMISSORIA: 'Promissória',
 };
@@ -27,51 +15,40 @@ const tipoCor: Record<TituloTipo, string> = {
   PROMISSORIA: 'bg-rose-50 text-rose-600',
 };
 
-function opStatusLabel(status: string) {
+function opStatusInfo(status: string): { label: string; cls: string } {
+  if (status === 'PAGA') return { label: 'Paga', cls: 'bg-green-100 text-green-700 border-green-200' };
   if (status === 'CONCLUIDA') return { label: 'Concluída', cls: 'bg-green-100 text-green-700 border-green-200' };
   if (status === 'CANCELADA') return { label: 'Cancelada', cls: 'bg-gray-100 text-gray-500 border-gray-200' };
-  return { label: 'Aberta', cls: 'bg-blue-100 text-blue-700 border-blue-200' };
+  return { label: 'Pendente', cls: 'bg-amber-100 text-amber-700 border-amber-200' };
 }
 
 export default async function TitulosPage() {
-  const [operacoes, titulosAvulsos] = await Promise.all([
-    prisma.operacao.findMany({
-      orderBy: { criadoEm: 'desc' },
-      include: {
-        cliente: { select: { nome: true } },
-        fornecedor: { select: { nome: true } },
-        titulos: {
-          select: {
-            id: true, valor: true, encargo: true, spreadBruto: true,
-            status: true, tipo: true, numero: true, dataVencimento: true,
-          },
+  const operacoes = await prisma.operacao.findMany({
+    orderBy: { criadoEm: 'desc' },
+    include: {
+      cliente: { select: { nome: true } },
+      fornecedor: { select: { nome: true } },
+      titulos: {
+        select: {
+          id: true, valor: true, encargo: true, spreadBruto: true,
+          status: true, tipo: true, numero: true, dataVencimento: true,
         },
       },
-    }),
-    prisma.titulo.findMany({
-      where: { operacaoId: null },
-      orderBy: { criadoEm: 'desc' },
-      include: { cliente: { select: { nome: true } } },
-    }),
-  ]);
+    },
+  });
 
-  const totais = {
-    valor: 0, encargo: 0, spread: 0,
-    titulos: titulosAvulsos.length,
-  };
-  for (const op of operacoes) {
-    for (const t of op.titulos) {
-      totais.valor += Number(t.valor);
-      totais.encargo += Number(t.encargo);
-      totais.spread += Number(t.spreadBruto);
-      totais.titulos++;
-    }
-  }
-  for (const t of titulosAvulsos) {
-    totais.valor += Number(t.valor);
-    totais.encargo += Number(t.encargo);
-    totais.spread += Number(t.spreadBruto);
-  }
+  const totais = operacoes.reduce(
+    (acc, op) => {
+      for (const t of op.titulos) {
+        acc.valor += Number(t.valor);
+        acc.encargo += Number(t.encargo);
+        acc.spread += Number(t.spreadBruto);
+        acc.titulos++;
+      }
+      return acc;
+    },
+    { valor: 0, encargo: 0, spread: 0, titulos: 0 }
+  );
 
   return (
     <div className="space-y-5">
@@ -113,7 +90,7 @@ export default async function TitulosPage() {
           <h3 className="font-semibold text-gray-700 text-sm">Operações</h3>
         </div>
 
-        {operacoes.length === 0 && titulosAvulsos.length === 0 ? (
+        {operacoes.length === 0 ? (
           <div className="py-16 text-center">
             <FileText className="w-12 h-12 text-gray-200 mx-auto mb-3" />
             <p className="text-gray-400 text-sm">Nenhuma operação cadastrada.</p>
@@ -128,9 +105,9 @@ export default async function TitulosPage() {
                 (acc, t) => ({ valor: acc.valor + Number(t.valor), encargo: acc.encargo + Number(t.encargo) }),
                 { valor: 0, encargo: 0 }
               );
-              const { label: sLabel, cls: sCls } = opStatusLabel(op.status);
-              const temPendente = op.titulos.some(t => t.status === TituloStatus.PENDENTE);
+              const { label: sLabel, cls: sCls } = opStatusInfo(op.status);
               const temVencido = op.titulos.some(t => t.status === TituloStatus.VENCIDO);
+              const temPendente = op.titulos.some(t => t.status === TituloStatus.PENDENTE);
               const tiposUnicos = Array.from(new Set(op.titulos.map(t => t.tipo)));
 
               return (
@@ -152,12 +129,12 @@ export default async function TitulosPage() {
                         </span>
                         {temVencido && (
                           <span className="text-xs px-2 py-0.5 rounded-full border font-medium bg-red-100 text-red-700 border-red-200">
-                            Vencido
+                            Títulos Vencidos
                           </span>
                         )}
                         {temPendente && !temVencido && (
                           <span className="text-xs px-2 py-0.5 rounded-full border font-medium bg-amber-100 text-amber-700 border-amber-200">
-                            Pendente
+                            Títulos Pendentes
                           </span>
                         )}
                       </div>
@@ -194,46 +171,6 @@ export default async function TitulosPage() {
                 </Link>
               );
             })}
-
-            {/* Títulos avulsos (sem operação) */}
-            {titulosAvulsos.length > 0 && (
-              <>
-                <div className="px-4 py-2 bg-gray-50">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Títulos Avulsos</p>
-                </div>
-                {titulosAvulsos.map((t) => (
-                  <Link
-                    key={t.id}
-                    href={`/sistema/titulos/${t.id}`}
-                    className="flex items-center justify-between px-4 py-3.5 hover:bg-gray-50/60 transition-colors group"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-                        <FileText className="w-4 h-4 text-gray-500" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${tipoCor[t.tipo]}`}>
-                            {tipoLabel[t.tipo]}
-                          </span>
-                          <span className="text-sm font-medium text-gray-700 truncate">{t.numero}</span>
-                        </div>
-                        <p className="text-xs text-gray-400 mt-0.5">{t.cliente?.nome ?? t.sacadoNome}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0 ml-4">
-                      <div className="text-right hidden sm:block">
-                        <p className="text-sm font-semibold text-gray-800">{formatarMoeda(Number(t.valor))}</p>
-                        <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${statusCor[t.status]}`}>
-                          {statusLabel[t.status]}
-                        </span>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
-                    </div>
-                  </Link>
-                ))}
-              </>
-            )}
           </div>
         )}
       </div>
