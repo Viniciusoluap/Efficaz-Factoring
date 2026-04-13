@@ -7,7 +7,7 @@ import { signOut, useSession } from 'next-auth/react';
 import {
   TrendingUp, LayoutDashboard, FileText, Calculator,
   Calendar, Users, Building2, Settings, LogOut,
-  ChevronLeft, ChevronRight, Shield, Menu, X,
+  ChevronLeft, ChevronRight, Shield, X, Inbox,
 } from 'lucide-react';
 
 const navItems = [
@@ -17,6 +17,7 @@ const navItems = [
   { href: '/sistema/vencimentos', label: 'Vencimentos', icon: Calendar },
   { href: '/sistema/clientes', label: 'Clientes', icon: Users },
   { href: '/sistema/fornecedores', label: 'Fornecedores', icon: Building2 },
+  { href: '/sistema/solicitacoes', label: 'Solicitações', icon: Inbox },
   { href: '/sistema/relatorios', label: 'Relatórios', icon: TrendingUp },
   { href: '/sistema/configuracoes', label: 'Configurações', icon: Settings },
 ];
