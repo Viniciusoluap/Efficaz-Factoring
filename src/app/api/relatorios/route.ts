@@ -8,18 +8,30 @@ export async function GET(req: NextRequest) {
   if (!token) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
 
   const { searchParams } = req.nextUrl;
-  const mes = parseInt(searchParams.get('mes') ?? String(new Date().getMonth() + 1));
-  const ano = parseInt(searchParams.get('ano') ?? String(new Date().getFullYear()));
+  const mesParam = searchParams.get('mes');
+  const anoParam = searchParams.get('ano');
   const clienteId = searchParams.get('clienteId') || undefined;
   const fornecedorId = searchParams.get('fornecedorId') || undefined;
 
-  const refDate = new Date(ano, mes - 1, 1);
-  const inicio = startOfMonth(refDate);
-  const fim = endOfMonth(refDate);
+  const mes = mesParam ? parseInt(mesParam) : null;
+  const ano = anoParam ? parseInt(anoParam) : null;
 
-  const where: any = {
-    criadoEm: { gte: inicio, lte: fim },
-  };
+  // Build date filter based on what's provided
+  let dateFilter: any = {};
+  if (ano && mes) {
+    const refDate = new Date(ano, mes - 1, 1);
+    dateFilter = { criadoEm: { gte: startOfMonth(refDate), lte: endOfMonth(refDate) } };
+  } else if (ano) {
+    dateFilter = {
+      criadoEm: {
+        gte: new Date(ano, 0, 1),
+        lte: new Date(ano, 11, 31, 23, 59, 59, 999),
+      },
+    };
+  }
+  // mes without ano → no date filter (cross-year monthly breakdown not supported)
+
+  const where: any = { ...dateFilter };
   if (clienteId) where.clienteId = clienteId;
   if (fornecedorId) where.fornecedorId = fornecedorId;
 
@@ -53,5 +65,5 @@ export async function GET(req: NextRequest) {
     prisma.fornecedor.findMany({ orderBy: { nome: 'asc' }, select: { id: true, nome: true } }),
   ]);
 
-  return NextResponse.json({ totaisGeral, totaisPeriodo, porTipo, titulos, clientes, fornecedores, mes, ano });
+  return NextResponse.json({ totaisGeral, totaisPeriodo, porTipo, titulos, clientes, fornecedores });
 }

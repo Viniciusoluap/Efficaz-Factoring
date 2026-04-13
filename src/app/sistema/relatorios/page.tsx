@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { formatarMoeda } from '@/lib/calculos';
-import { BarChart3, FileDown, Filter, RefreshCw } from 'lucide-react';
+import { BarChart3, FileDown, Filter, RefreshCw, Pencil, Trash2, Loader2, AlertTriangle } from 'lucide-react';
+import Link from 'next/link';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -10,7 +11,8 @@ const MESES = [
   'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
   'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro',
 ];
-const ANOS = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() + i);
+const hoje = new Date();
+const ANOS = Array.from({ length: 8 }, (_, i) => hoje.getFullYear() - 2 + i);
 
 type Dados = {
   totaisGeral: any;
@@ -19,23 +21,24 @@ type Dados = {
   titulos: any[];
   clientes: { id: string; nome: string }[];
   fornecedores: { id: string; nome: string }[];
-  mes: number;
-  ano: number;
 };
 
 export default function RelatoriosPage() {
-  const hoje = new Date();
-  const [mes, setMes] = useState(hoje.getMonth() + 1);
-  const [ano, setAno] = useState(hoje.getFullYear());
+  const [mes, setMes] = useState<number | ''>(hoje.getMonth() + 1);
+  const [ano, setAno] = useState<number | ''>(hoje.getFullYear());
   const [clienteId, setClienteId] = useState('');
   const [fornecedorId, setFornecedorId] = useState('');
   const [dados, setDados] = useState<Dados | null>(null);
   const [loading, setLoading] = useState(true);
   const [gerando, setGerando] = useState(false);
+  const [confirmDelId, setConfirmDelId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const carregar = useCallback(() => {
     setLoading(true);
-    const params = new URLSearchParams({ mes: String(mes), ano: String(ano) });
+    const params = new URLSearchParams();
+    if (mes) params.set('mes', String(mes));
+    if (ano) params.set('ano', String(ano));
     if (clienteId) params.set('clienteId', clienteId);
     if (fornecedorId) params.set('fornecedorId', fornecedorId);
     fetch(`/api/relatorios?${params}`)
@@ -46,6 +49,22 @@ export default function RelatoriosPage() {
 
   useEffect(() => { carregar(); }, [carregar]);
 
+  const excluirTitulo = async (id: string) => {
+    setDeletingId(id);
+    await fetch(`/api/titulos/${id}`, { method: 'DELETE' });
+    setDeletingId(null);
+    setConfirmDelId(null);
+    carregar();
+  };
+
+  const periodoLabel = mes && ano
+    ? `${MESES[mes - 1]} de ${ano}`
+    : ano
+    ? `Ano de ${ano}`
+    : mes
+    ? `${MESES[mes - 1]} (todos os anos)`
+    : 'Todo o período';
+
   const gerarPDF = async () => {
     if (!dados) return;
     setGerando(true);
@@ -54,7 +73,13 @@ export default function RelatoriosPage() {
       const autoTable = (await import('jspdf-autotable')).default;
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-      const periodoLabel = `${MESES[mes - 1]} de ${ano}`;
+      const periodoLabel = mes && ano
+        ? `${MESES[mes - 1]} de ${ano}`
+        : ano
+        ? `Ano ${ano}`
+        : mes
+        ? `${MESES[mes - 1]} (todos os anos)`
+        : 'Todo o período';
       const clienteNome = dados.clientes.find(c => c.id === clienteId)?.nome ?? 'Todos';
       const fornecedorNome = dados.fornecedores.find(f => f.id === fornecedorId)?.nome ?? 'Todos';
 
@@ -184,13 +209,15 @@ export default function RelatoriosPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1">Mês</label>
-            <select className={`${selCls} w-full`} value={mes} onChange={e => setMes(Number(e.target.value))}>
+            <select className={`${selCls} w-full`} value={mes} onChange={e => setMes(e.target.value === '' ? '' : Number(e.target.value))}>
+              <option value="">Todos os meses</option>
               {MESES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1">Ano</label>
-            <select className={`${selCls} w-full`} value={ano} onChange={e => setAno(Number(e.target.value))}>
+            <select className={`${selCls} w-full`} value={ano} onChange={e => setAno(e.target.value === '' ? '' : Number(e.target.value))}>
+              <option value="">Todos os anos</option>
               {ANOS.map(a => <option key={a} value={a}>{a}</option>)}
             </select>
           </div>
@@ -249,7 +276,7 @@ export default function RelatoriosPage() {
             {/* Período selecionado */}
             <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
               <h3 className="font-semibold text-gray-700 mb-4 capitalize">
-                {MESES[mes - 1]} de {ano}
+                {periodoLabel}
               </h3>
               <div className="space-y-3">
                 {[
@@ -300,7 +327,7 @@ export default function RelatoriosPage() {
           <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
             <h3 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-blue-600" />
-              Títulos — {MESES[mes - 1]} de {ano}
+              Títulos — {periodoLabel}
               <span className="ml-auto text-xs text-gray-400 font-normal">{dados.titulos.length} título{dados.titulos.length !== 1 ? 's' : ''}</span>
             </h3>
             {dados.titulos.length === 0 ? (
@@ -310,7 +337,7 @@ export default function RelatoriosPage() {
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="bg-gray-50">
-                      {['Número', 'Tipo', 'Cliente', 'Vencimento', 'Valor', 'Encargo', 'Spread Líq.', 'Status'].map(h => (
+                      {['Número', 'Tipo', 'Cliente', 'Vencimento', 'Valor', 'Encargo', 'Spread Líq.', 'Status', ''].map(h => (
                         <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
                       ))}
                     </tr>
@@ -328,10 +355,49 @@ export default function RelatoriosPage() {
                         <td className="px-3 py-2.5">
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                             t.status === 'APROVADO' ? 'bg-green-100 text-green-700' :
-                            t.status === 'PENDENTE' ? 'bg-yellow-100 text-yellow-700' :
+                            t.status === 'LIQUIDADO' ? 'bg-blue-100 text-blue-700' :
+                            t.status === 'PENDENTE' ? 'bg-amber-100 text-amber-700' :
                             t.status === 'VENCIDO' ? 'bg-red-100 text-red-700' :
                             'bg-gray-100 text-gray-600'
-                          }`}>{t.status}</span>
+                          }`}>{t.status === 'LIQUIDADO' ? 'Pago' : t.status === 'PENDENTE' ? 'Pendente' : t.status === 'VENCIDO' ? 'Vencido' : t.status}</span>
+                        </td>
+                        <td className="px-3 py-2.5">
+                          {confirmDelId === t.id ? (
+                            <div className="flex items-center gap-1 whitespace-nowrap">
+                              <AlertTriangle className="w-3 h-3 text-red-500 shrink-0" />
+                              <button
+                                onClick={() => excluirTitulo(t.id)}
+                                disabled={deletingId === t.id}
+                                className="text-xs text-white bg-red-600 hover:bg-red-700 px-2 py-1 rounded-lg font-semibold disabled:opacity-60 inline-flex items-center gap-1"
+                              >
+                                {deletingId === t.id && <Loader2 className="w-3 h-3 animate-spin" />}
+                                Excluir
+                              </button>
+                              <button
+                                onClick={() => setConfirmDelId(null)}
+                                className="text-xs text-gray-500 hover:text-gray-700 px-1.5 py-1 rounded-lg"
+                              >
+                                Não
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              <Link
+                                href={`/sistema/titulos/${t.id}/editar`}
+                                className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                                title="Editar"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </Link>
+                              <button
+                                onClick={() => setConfirmDelId(t.id)}
+                                className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                title="Excluir"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ))}
