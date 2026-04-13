@@ -15,25 +15,25 @@ const contactInfo = [
   {
     icon: Phone,
     label: 'Telefone',
-    value: '(11) 3000-0000',
-    href: 'tel:+551130000000',
+    value: '(99) 8139-2210',
+    href: 'tel:+559981392210',
   },
   {
     icon: MessageSquare,
     label: 'WhatsApp',
-    value: '(11) 99000-0000',
-    href: 'https://wa.me/5511990000000',
+    value: '(99) 8139-2210',
+    href: 'https://wa.me/559981392210',
   },
   {
     icon: Mail,
     label: 'E-mail',
-    value: 'contato@efficazfactoring.com.br',
-    href: 'mailto:contato@efficazfactoring.com.br',
+    value: 'contato@grupoefficaz.com.br',
+    href: 'mailto:contato@grupoefficaz.com.br',
   },
   {
     icon: MapPin,
     label: 'Endereço',
-    value: 'Av. Paulista, 1000 — São Paulo, SP',
+    value: 'R. Leôncio Pires Dourado, 840A — Imperatriz/MA',
     href: '#',
   },
   {
@@ -174,7 +174,7 @@ export default function Contact() {
                 atendimento agora mesmo.
               </p>
               <a
-                href="https://wa.me/5511990000000?text=Olá!%20Gostaria%20de%20uma%20análise%20gratuita%20para%20minha%20empresa."
+                href="https://wa.me/559981392210?text=Olá!%20Gostaria%20de%20uma%20análise%20gratuita%20para%20minha%20empresa."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 bg-green-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-green-600 transition-colors"

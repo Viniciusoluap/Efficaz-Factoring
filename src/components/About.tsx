@@ -33,7 +33,7 @@ export default function About() {
             <div className="gradient-primary rounded-3xl p-8 text-white">
               <div className="grid grid-cols-2 gap-6">
                 {[
-                  { number: '2009', label: 'Fundada em' },
+                  { number: '2001', label: 'Fundada em' },
                   { number: '+2.500', label: 'Empresas atendidas' },
                   { number: 'R$ 500M+', label: 'Em recebíveis antecipados' },
                   { number: '100%', label: 'Digital e ágil' },

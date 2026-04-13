@@ -128,10 +128,9 @@ export default function Footer() {
               Contato
             </h4>
             <ul className="space-y-2.5 mb-6">
-              <li className="text-sm text-white/70">(11) 3000-0000</li>
-              <li className="text-sm text-white/70">(11) 99000-0000</li>
-              <li className="text-sm text-white/70">contato@efficazfactoring.com.br</li>
-              <li className="text-sm text-white/70">Av. Paulista, 1000 — São Paulo, SP</li>
+              <li className="text-sm text-white/70">(99) 8139-2210</li>
+              <li className="text-sm text-white/70">contato@grupoefficaz.com.br</li>
+              <li className="text-sm text-white/70">R. Leôncio Pires Dourado, 840A — Imperatriz/MA</li>
             </ul>
 
             {/* Certifications */}
@@ -163,7 +162,7 @@ export default function Footer() {
         <div className="container mx-auto px-4 md:px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-white/40 text-center sm:text-left">
             © {new Date().getFullYear()} Efficaz Factoring. Todos os direitos reservados.
-            CNPJ: 00.000.000/0001-00
+            CNPJ: 04.578.232/0001-82
           </p>
 
           <div className="flex items-center gap-4">
