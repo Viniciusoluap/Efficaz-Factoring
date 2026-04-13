@@ -14,7 +14,6 @@ const navItems = [
   { href: '/sistema/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/sistema/titulos', label: 'Títulos', icon: FileText },
   { href: '/sistema/calcular', label: 'Calculadora', icon: Calculator },
-  { href: '/sistema/vencimentos', label: 'Vencimentos', icon: Calendar },
   { href: '/sistema/clientes', label: 'Clientes', icon: Users },
   { href: '/sistema/fornecedores', label: 'Fornecedores', icon: Building2 },
   { href: '/sistema/solicitacoes', label: 'Solicitações', icon: Inbox },
