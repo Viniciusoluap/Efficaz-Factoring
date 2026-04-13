@@ -87,7 +87,7 @@ export default function Benefits() {
             <span className="text-accent-500">Efficaz Factoring</span>?
           </h2>
           <p className="section-subtitle">
-            Mais de 15 anos oferecendo soluções financeiras inteligentes para empresas
+            Mais de 25 anos oferecendo soluções financeiras inteligentes para empresas
             que querem crescer com segurança.
           </p>
         </div>

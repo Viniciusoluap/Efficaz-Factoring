@@ -81,7 +81,7 @@ export default function About() {
               <span className="text-accent-500">impulsionar</span> o seu negócio
             </h2>
             <p className="text-gray-600 leading-relaxed mb-6">
-              Há mais de 15 anos no mercado, a Efficaz Factoring é especializada em soluções
+              Há mais de 25 anos no mercado, a Efficaz Factoring é especializada em soluções
               financeiras para micro, pequenas e médias empresas. Entendemos que o fluxo de caixa
               é o coração de qualquer negócio e atuamos para mantê-lo sempre saudável.
             </p>
