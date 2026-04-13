@@ -3,6 +3,7 @@ import { formatarMoeda } from '@/lib/calculos';
 import Link from 'next/link';
 import { Plus, Users, TrendingUp } from 'lucide-react';
 import { format } from 'date-fns';
+import ClienteAcoes from '@/components/sistema/ClienteAcoes';
 
 export default async function ClientesPage() {
   const clientes = await prisma.cliente.findMany({
@@ -39,9 +40,12 @@ export default async function ClientesPage() {
                   <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 font-bold text-sm">
                     {c.nome.charAt(0).toUpperCase()}
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                    {c.ativo ? 'Ativo' : 'Inativo'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                      {c.ativo ? 'Ativo' : 'Inativo'}
+                    </span>
+                    <ClienteAcoes id={c.id} />
+                  </div>
                 </div>
                 <h3 className="font-semibold text-gray-800 text-sm">{c.nome}</h3>
                 <p className="text-xs text-gray-400 mb-3">{c.cpfCnpj} · {c.email}</p>
