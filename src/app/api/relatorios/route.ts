@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
   const anoParam = searchParams.get('ano');
   const clienteId = searchParams.get('clienteId') || undefined;
   const fornecedorId = searchParams.get('fornecedorId') || undefined;
+  const statusParam = searchParams.get('status') || undefined;
 
   const mes = mesParam ? parseInt(mesParam) : null;
   const ano = anoParam ? parseInt(anoParam) : null;
@@ -34,10 +35,12 @@ export async function GET(req: NextRequest) {
   const where: any = { ...dateFilter };
   if (clienteId) where.clienteId = clienteId;
   if (fornecedorId) where.fornecedorId = fornecedorId;
+  if (statusParam) where.status = statusParam;
 
   const whereGeral: any = {};
   if (clienteId) whereGeral.clienteId = clienteId;
   if (fornecedorId) whereGeral.fornecedorId = fornecedorId;
+  if (statusParam) whereGeral.status = statusParam;
 
   const [totaisGeral, totaisPeriodo, porTipo, titulos, clientes, fornecedores] = await Promise.all([
     prisma.titulo.aggregate({

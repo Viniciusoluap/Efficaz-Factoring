@@ -28,6 +28,7 @@ export default function RelatoriosPage() {
   const [ano, setAno] = useState<number | ''>(hoje.getFullYear());
   const [clienteId, setClienteId] = useState('');
   const [fornecedorId, setFornecedorId] = useState('');
+  const [status, setStatus] = useState('');
   const [dados, setDados] = useState<Dados | null>(null);
   const [loading, setLoading] = useState(true);
   const [gerando, setGerando] = useState(false);
@@ -41,11 +42,12 @@ export default function RelatoriosPage() {
     if (ano) params.set('ano', String(ano));
     if (clienteId) params.set('clienteId', clienteId);
     if (fornecedorId) params.set('fornecedorId', fornecedorId);
+    if (status) params.set('status', status);
     fetch(`/api/relatorios?${params}`)
       .then(r => r.json())
       .then(d => { setDados(d); setLoading(false); })
       .catch(() => setLoading(false));
-  }, [mes, ano, clienteId, fornecedorId]);
+  }, [mes, ano, clienteId, fornecedorId, status]);
 
   useEffect(() => { carregar(); }, [carregar]);
 
@@ -206,7 +208,7 @@ export default function RelatoriosPage() {
           <Filter className="w-4 h-4 text-blue-600" />
           <h2 className="font-semibold text-gray-700 text-sm">Filtros</h2>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1">Mês</label>
             <select className={`${selCls} w-full`} value={mes} onChange={e => setMes(e.target.value === '' ? '' : Number(e.target.value))}>
@@ -219,6 +221,15 @@ export default function RelatoriosPage() {
             <select className={`${selCls} w-full`} value={ano} onChange={e => setAno(e.target.value === '' ? '' : Number(e.target.value))}>
               <option value="">Todos os anos</option>
               {ANOS.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1">Status</label>
+            <select className={`${selCls} w-full`} value={status} onChange={e => setStatus(e.target.value)}>
+              <option value="">Todos os status</option>
+              <option value="PENDENTE">Pendente</option>
+              <option value="LIQUIDADO">Pago</option>
+              <option value="VENCIDO">Vencido</option>
             </select>
           </div>
           <div>
