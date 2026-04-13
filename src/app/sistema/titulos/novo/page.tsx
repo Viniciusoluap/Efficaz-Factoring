@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { calcularOperacao, calcularFiscal, formatarMoeda } from '@/lib/calculos';
 import { differenceInDays, format, addDays, isValid } from 'date-fns';
-import { Save, Calculator, AlertCircle, ArrowLeft, Plus, Trash2, ChevronDown, ChevronUp, CheckCircle2, Lock } from 'lucide-react';
+import { Save, Calculator, AlertCircle, ArrowLeft, Plus, Trash2, ChevronDown, ChevronUp, CheckCircle2, Lock, Copy } from 'lucide-react';
 import Link from 'next/link';
 import OcrCheque from '@/components/sistema/OcrCheque';
 
@@ -61,6 +61,7 @@ export default function NovoTituloPage() {
   // Lista de títulos
   const [titulos, setTitulos] = useState<TituloItem[]>([novaTituloItem()]);
   const [expandido, setExpandido] = useState<string>(titulos[0].id);
+  const [replicarAberto, setReplicarAberto] = useState<{ id: string; tipo: 'emitente' | 'sacado' } | null>(null);
 
   const [clientes, setClientes] = useState<{ id: string; nome: string }[]>([]);
   const [fornecedores, setFornecedores] = useState<{ id: string; nome: string }[]>([]);
@@ -69,6 +70,13 @@ export default function NovoTituloPage() {
     fetch('/api/clientes?ativo=true').then(r => r.json()).then(setClientes).catch(() => {});
     fetch('/api/fornecedores?ativo=true').then(r => r.json()).then(setFornecedores).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!replicarAberto) return;
+    const handler = () => setReplicarAberto(null);
+    window.addEventListener('click', handler);
+    return () => window.removeEventListener('click', handler);
+  }, [replicarAberto]);
 
   const setTitulo = (id: string, campo: keyof TituloItem, valor: string) => {
     setTitulos(prev => prev.map(t => {
@@ -96,6 +104,20 @@ export default function NovoTituloPage() {
   const removerTitulo = (id: string) => {
     if (titulos.length === 1) return;
     setTitulos(prev => prev.filter(t => t.id !== id));
+  };
+
+  const replicarEmitente = (targetId: string, source: TituloItem) => {
+    setTitulos(prev => prev.map(t =>
+      t.id !== targetId ? t : { ...t, emitenteCpfCnpj: source.emitenteCpfCnpj, emitenteNome: source.emitenteNome }
+    ));
+    setReplicarAberto(null);
+  };
+
+  const replicarSacado = (targetId: string, source: TituloItem) => {
+    setTitulos(prev => prev.map(t =>
+      t.id !== targetId ? t : { ...t, sacadoCpfCnpj: source.sacadoCpfCnpj, sacadoNome: source.sacadoNome }
+    ));
+    setReplicarAberto(null);
   };
 
   const confirmarEtapa1 = () => {
@@ -331,7 +353,32 @@ export default function NovoTituloPage() {
                     {/* Partes */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-3">
-                        <p className="text-xs font-bold text-gray-500 uppercase">Emitente</p>
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-bold text-gray-500 uppercase">Emitente</p>
+                          {titulos.filter(o => o.id !== t.id && o.emitenteNome).length > 0 && (
+                            <div className="relative">
+                              <button
+                                type="button"
+                                onClick={e => { e.stopPropagation(); setReplicarAberto(prev => prev?.id === t.id && prev.tipo === 'emitente' ? null : { id: t.id, tipo: 'emitente' }); }}
+                                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium"
+                              >
+                                <Copy className="w-3 h-3" /> Repetir de
+                              </button>
+                              {replicarAberto?.id === t.id && replicarAberto.tipo === 'emitente' && (
+                                <div onClick={e => e.stopPropagation()} className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-30 min-w-[200px] py-1">
+                                  {titulos.filter(o => o.id !== t.id && o.emitenteNome).map((o, oi) => (
+                                    <button key={o.id} type="button"
+                                      onClick={() => replicarEmitente(t.id, o)}
+                                      className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors">
+                                      <p className="text-xs font-semibold text-gray-700">{o.emitenteNome}</p>
+                                      <p className="text-xs text-gray-400">{o.emitenteCpfCnpj}</p>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                         <div>
                           <label className={labelCls}>CPF/CNPJ *</label>
                           <input className={inputCls} value={t.emitenteCpfCnpj} onChange={e => setTitulo(t.id, 'emitenteCpfCnpj', e.target.value)} placeholder="000.000.000-00" />
@@ -342,7 +389,32 @@ export default function NovoTituloPage() {
                         </div>
                       </div>
                       <div className="space-y-3">
-                        <p className="text-xs font-bold text-gray-500 uppercase">Sacado</p>
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-bold text-gray-500 uppercase">Sacado</p>
+                          {titulos.filter(o => o.id !== t.id && o.sacadoNome).length > 0 && (
+                            <div className="relative">
+                              <button
+                                type="button"
+                                onClick={e => { e.stopPropagation(); setReplicarAberto(prev => prev?.id === t.id && prev.tipo === 'sacado' ? null : { id: t.id, tipo: 'sacado' }); }}
+                                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium"
+                              >
+                                <Copy className="w-3 h-3" /> Repetir de
+                              </button>
+                              {replicarAberto?.id === t.id && replicarAberto.tipo === 'sacado' && (
+                                <div onClick={e => e.stopPropagation()} className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-30 min-w-[200px] py-1">
+                                  {titulos.filter(o => o.id !== t.id && o.sacadoNome).map((o, oi) => (
+                                    <button key={o.id} type="button"
+                                      onClick={() => replicarSacado(t.id, o)}
+                                      className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors">
+                                      <p className="text-xs font-semibold text-gray-700">{o.sacadoNome}</p>
+                                      <p className="text-xs text-gray-400">{o.sacadoCpfCnpj}</p>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                         <div>
                           <label className={labelCls}>CPF/CNPJ *</label>
                           <input className={inputCls} value={t.sacadoCpfCnpj} onChange={e => setTitulo(t.id, 'sacadoCpfCnpj', e.target.value)} placeholder="000.000.000-00" />

@@ -257,13 +257,14 @@ export default function RelatoriosPage() {
       ) : dados ? (
         <>
           {/* Resumo geral */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {[
               { label: 'Total de Títulos', value: String(dados.totaisPeriodo._count?.id ?? 0), cor: 'text-gray-800' },
               { label: 'Volume Total', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.valor ?? 0)), cor: 'text-blue-600' },
+              { label: 'Total Antecipado', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.valorLiquidoCliente ?? 0)), cor: 'text-green-600' },
               { label: 'Encargos Totais', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.encargo ?? 0)), cor: 'text-amber-600' },
               { label: 'Spread Bruto Total', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.spreadBruto ?? 0)), cor: 'text-purple-600' },
-              { label: 'Spread Líquido Total', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.spreadLiquido ?? 0)), cor: 'text-green-600' },
+              { label: 'Spread Líquido Total', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.spreadLiquido ?? 0)), cor: 'text-green-700' },
             ].map(({ label, value, cor }) => (
               <div key={label} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
                 <p className={`text-xl font-bold ${cor}`}>{value}</p>
@@ -282,6 +283,7 @@ export default function RelatoriosPage() {
                 {[
                   { label: 'Títulos', value: String(dados.totaisPeriodo._count?.id ?? 0) },
                   { label: 'Volume', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.valor ?? 0)) },
+                  { label: 'Total Antecipado', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.valorLiquidoCliente ?? 0)) },
                   { label: 'Spread Bruto', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.spreadBruto ?? 0)) },
                   { label: 'Imposto Prov.', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.impostoProvisao ?? 0)) },
                   { label: 'Spread Líquido', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.spreadLiquido ?? 0)) },

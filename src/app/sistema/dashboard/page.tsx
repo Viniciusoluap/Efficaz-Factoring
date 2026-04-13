@@ -24,8 +24,8 @@ async function getDashboardData() {
       where: { status: { in: [TituloStatus.APROVADO, TituloStatus.PENDENTE] } },
     }),
     prisma.titulo.aggregate({
-      _sum: { valor: true },
-      where: { status: TituloStatus.APROVADO },
+      _sum: { valorLiquidoCliente: true },
+      where: { operacao: { status: 'PAGA' } },
     }),
     prisma.titulo.count({
       where: {
@@ -58,7 +58,7 @@ async function getDashboardData() {
   return {
     totalTitulos,
     custodiado: Number(custodiado._sum.valor ?? 0),
-    antecipado: Number(antecipado._sum.valor ?? 0),
+    antecipado: Number(antecipado._sum.valorLiquidoCliente ?? 0),
     vencimentosHoje,
     vencidos,
     spreadMes: Number(spreadMes._sum.spreadBruto ?? 0),
@@ -94,7 +94,7 @@ export default async function DashboardPage() {
 
   const cards = [
     { label: 'Total Custodiado', value: formatarMoeda(d.custodiado), icon: DollarSign, cor: 'text-blue-600', bg: 'bg-blue-50', desc: `${d.totalTitulos} títulos ativos` },
-    { label: 'Total Antecipado', value: formatarMoeda(d.antecipado), icon: TrendingUp, cor: 'text-green-600', bg: 'bg-green-50', desc: 'Em operação aprovada' },
+    { label: 'Total Antecipado', value: formatarMoeda(d.antecipado), icon: TrendingUp, cor: 'text-green-600', bg: 'bg-green-50', desc: 'Líquido de operações pagas' },
     { label: 'Spread do Mês', value: formatarMoeda(d.spreadMes), icon: Percent, cor: 'text-amber-600', bg: 'bg-amber-50', desc: `Imposto prov.: ${formatarMoeda(d.impostoMes)}` },
     { label: 'Vencem Hoje', value: String(d.vencimentosHoje), icon: Clock, cor: 'text-orange-600', bg: 'bg-orange-50', desc: 'Ação necessária' },
     { label: 'Títulos Vencidos', value: String(d.vencidos), icon: AlertTriangle, cor: 'text-red-600', bg: 'bg-red-50', desc: 'Requer atenção' },
