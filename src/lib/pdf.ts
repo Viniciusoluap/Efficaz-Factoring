@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-type DadosTitulo = {
+export type DadosTitulo = {
   numero: string;
   tipo: string;
   emitenteNome: string;
@@ -23,206 +23,292 @@ type DadosTitulo = {
   criadoEm: string;
 };
 
-const R = (v: number) =>
-  v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const R = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+const EMPRESA = {
+  razaoSocial: 'EFFICAZ SERVIÇOS FINANCEIROS LTDA',
+  fantasia: 'Efficaz Factoring',
+  cnpj: '04.578.232/0001-82',
+  endereco: 'Rua Leôncio Pires Dourado, nº 840-A, Bairro Bacuri',
+  cidade: 'Imperatriz – MA',
+  cep: 'CEP 65.901-020',
+  email: 'contato@grupoefficaz.com.br',
+  telefone: '(99) 8139-2210',
+  foro: 'Comarca de Imperatriz, Estado do Maranhão',
+};
+
+function addPage(doc: jsPDF, y: number, limite = 265): { doc: jsPDF; y: number; newPage: boolean } {
+  if (y > limite) {
+    doc.addPage();
+    return { doc, y: 22, newPage: true };
+  }
+  return { doc, y, newPage: false };
+}
+
+function secao(doc: jsPDF, titulo: string, y: number, L: number): number {
+  const r = addPage(doc, y);
+  y = r.y + (r.newPage ? 0 : 4);
+  doc.setFillColor(15, 23, 42);
+  doc.rect(L - 2, y - 4, 174, 7, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'bold');
+  doc.text(titulo, L, y);
+  doc.setTextColor(40, 40, 60);
+  return y + 7;
+}
+
+function paragrafo(doc: jsPDF, texto: string, y: number, L: number, W: number, size = 8.5): number {
+  const r = addPage(doc, y);
+  y = r.y;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(size);
+  doc.setTextColor(40, 40, 60);
+  const linhas = doc.splitTextToSize(texto, W);
+  doc.text(linhas, L, y);
+  return y + linhas.length * (size * 0.42) + 3;
+}
 
 export async function gerarContratoPDF(dados: DadosTitulo) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const L = 20; // left margin
-  const W = 170; // content width
-  let y = 20;
+  const L = 18;
+  const W = 174;
+  let y = 0;
 
-  // ── Header ──────────────────────────────────────────────
+  // ── CABEÇALHO ───────────────────────────────────────────────────
   doc.setFillColor(15, 23, 42);
-  doc.rect(0, 0, 210, 30, 'F');
-
+  doc.rect(0, 0, 210, 32, 'F');
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(16);
+  doc.setFontSize(15);
   doc.setFont('helvetica', 'bold');
-  doc.text('EFFICAZ FACTORING', L, 13);
-
+  doc.text(EMPRESA.fantasia.toUpperCase(), L, 13);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(180, 180, 200);
-  doc.text('CONTRATO DE CESSÃO DE CRÉDITO', L, 20);
-  doc.text('contato@grupoefficaz.com.br', 210 - L, 20, { align: 'right' });
+  doc.setTextColor(160, 175, 210);
+  doc.text('CONTRATO DE FOMENTO MERCANTIL E CESSÃO DE CRÉDITO', L, 20);
+  doc.text(`CNPJ ${EMPRESA.cnpj}  ·  ${EMPRESA.email}`, L, 26);
 
   y = 42;
 
-  // ── Título do contrato ──────────────────────────────────
+  // ── TÍTULO ──────────────────────────────────────────────────────
   doc.setTextColor(15, 23, 42);
-  doc.setFontSize(13);
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text('CONTRATO DE CESSÃO DE CRÉDITO', 105, y, { align: 'center' });
-
-  y += 6;
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(100, 100, 120);
-  doc.text(
-    `Operação nº ${dados.numero}  ·  Gerado em ${dados.criadoEm}`,
-    105,
-    y,
-    { align: 'center' }
-  );
-
-  y += 10;
-
-  // ── Linha separadora ────────────────────────────────────
-  doc.setDrawColor(220, 220, 235);
-  doc.line(L, y, 210 - L, y);
-  y += 8;
-
-  // ── Qualificação das partes ─────────────────────────────
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(15, 23, 42);
-  doc.text('DAS PARTES', L, y);
-  y += 6;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(50, 50, 70);
-
-  const partes = [
-    [
-      'CEDENTE (Efficaz Factoring)',
-      'Efficaz Factoring Ltda., pessoa jurídica de direito privado,\ninscrita no CNPJ/MF sob o nº 00.000.000/0001-00, com sede\nna Av. Paulista, 1000 — São Paulo/SP, doravante "CESSIONÁRIA".',
-    ],
-    [
-      `CEDENTE / CLIENTE${dados.clienteNome ? ` (${dados.clienteNome})` : ''}`,
-      `${dados.emitenteNome}, portador(a) do CPF/CNPJ nº ${dados.emitenteCpfCnpj},\ndoravante denominado(a) "CEDENTE".`,
-    ],
-  ];
-
-  for (const [titulo, texto] of partes) {
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(30, 64, 175);
-    doc.text(titulo, L, y);
-    y += 5;
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(50, 50, 70);
-    const linhas = doc.splitTextToSize(texto, W);
-    doc.text(linhas, L, y);
-    y += linhas.length * 5 + 4;
-  }
-
-  y += 2;
-  doc.line(L, y, 210 - L, y);
-  y += 8;
-
-  // ── Objeto ──────────────────────────────────────────────
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.setTextColor(15, 23, 42);
-  doc.text('DO OBJETO', L, y);
-  y += 6;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(50, 50, 70);
-
-  const tipoLabel: Record<string, string> = {
-    CHEQUE: 'cheque', BOLETO: 'boleto', PROMISSORIA: 'promissória',
-  };
-
-  const objetoTexto = `O presente contrato tem por objeto a cessão, pelo CEDENTE à CESSIONÁRIA, do ${tipoLabel[dados.tipo] ?? dados.tipo} de nº ${dados.numero}, emitido por ${dados.emitenteNome} (CPF/CNPJ: ${dados.emitenteCpfCnpj}), com vencimento em ${dados.dataVencimento}, no valor nominal de ${R(dados.valor)}.`;
-  const linhasObjeto = doc.splitTextToSize(objetoTexto, W);
-  doc.text(linhasObjeto, L, y);
-  y += linhasObjeto.length * 5 + 8;
-
-  // ── Tabela financeira ───────────────────────────────────
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.setTextColor(15, 23, 42);
-  doc.text('DAS CONDIÇÕES FINANCEIRAS', L, y);
+  doc.text('CONTRATO DE FOMENTO MERCANTIL', 105, y, { align: 'center' });
   y += 5;
+  doc.text('E CESSÃO DE CRÉDITO', 105, y, { align: 'center' });
+  y += 7;
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 100, 130);
+  doc.text(`Nº ${dados.numero}  ·  Gerado em ${dados.criadoEm}`, 105, y, { align: 'center' });
+  y += 5;
+  doc.setDrawColor(200, 210, 230);
+  doc.setLineWidth(0.4);
+  doc.line(L, y, 210 - L, y);
+  y += 8;
+
+  // ── PREÂMBULO ───────────────────────────────────────────────────
+  y = secao(doc, 'IDENTIFICAÇÃO DAS PARTES', y, L);
+  y = paragrafo(doc,
+    `CESSIONÁRIA: ${EMPRESA.razaoSocial}, pessoa jurídica de direito privado, inscrita no CNPJ/MF sob o nº ${EMPRESA.cnpj}, com sede na ${EMPRESA.endereco}, ${EMPRESA.cidade}, ${EMPRESA.cep}, doravante denominada simplesmente "CESSIONÁRIA".`,
+    y, L, W);
+  y = paragrafo(doc,
+    `CEDENTE: ${dados.emitenteNome}, inscrito(a) no CPF/CNPJ sob o nº ${dados.emitenteCpfCnpj}, doravante denominado(a) simplesmente "CEDENTE".`,
+    y, L, W);
+  y = paragrafo(doc,
+    `DEVEDOR / SACADO: ${dados.sacadoNome}, inscrito(a) no CPF/CNPJ sob o nº ${dados.sacadoCpfCnpj}, doravante denominado(a) simplesmente "DEVEDOR".`,
+    y, L, W);
+
+  // ── CLÁUSULA 1ª ─────────────────────────────────────────────────
+  y = secao(doc, 'CLÁUSULA PRIMEIRA – DO OBJETO E DA NATUREZA JURÍDICA', y, L);
+  y = paragrafo(doc,
+    '1.1. O presente instrumento tem por objeto a compra e venda mercantil de título de crédito, com a consequente cessão definitiva e irrevogável, pelo CEDENTE à CESSIONÁRIA, do crédito especificado na Cláusula Segunda, nos termos dos arts. 286 a 298 do Código Civil Brasileiro (Lei nº 10.406/2002) e em conformidade com a Resolução CMN nº 2.144/1995, que regulamenta as atividades das sociedades de fomento mercantil.',
+    y, L, W);
+  y = paragrafo(doc,
+    '1.2. A presente operação caracteriza-se como fomento mercantil (factoring), modalidade "convencional", consistindo na aquisição de créditos oriundos de transações mercantis, com pagamento à vista do valor líquido acordado e assunção, pela CESSIONÁRIA, dos riscos de inadimplência do DEVEDOR, ressalvadas as hipóteses de co-obrigação previstas neste contrato.',
+    y, L, W);
+  y = paragrafo(doc,
+    '1.3. A cessão ora contratada é definitiva, perfeita e acabada (pro soluto), transferindo-se todos os direitos, ações e prerrogativas sobre o crédito cedido à CESSIONÁRIA, nos termos do art. 287 do Código Civil.',
+    y, L, W);
+
+  // ── CLÁUSULA 2ª ─────────────────────────────────────────────────
+  y = secao(doc, 'CLÁUSULA SEGUNDA – DO CRÉDITO CEDIDO E DAS CONDIÇÕES FINANCEIRAS', y, L);
+  y = paragrafo(doc,
+    `2.1. O crédito objeto desta cessão é representado pelo ${dados.tipo.toLowerCase()} de nº ${dados.numero}, emitido por ${dados.emitenteNome} (CPF/CNPJ: ${dados.emitenteCpfCnpj}), sacado contra ${dados.sacadoNome} (CPF/CNPJ: ${dados.sacadoCpfCnpj}), com data de emissão em ${dados.dataEmissao} e vencimento em ${dados.dataVencimento}, no valor nominal de ${R(dados.valor)}.`,
+    y, L, W);
+
+  const r1 = addPage(doc, y + 10);
+  y = r1.y;
 
   autoTable(doc, {
     startY: y,
     margin: { left: L, right: L },
-    head: [['Descrição', 'Valor']],
+    head: [['Descrição', 'Valor / Prazo']],
     body: [
-      ['Valor nominal do título', R(dados.valor)],
-      [`Taxa de cessão (${dados.taxaCliente.toFixed(2)}% a.m. × ${dados.prazo} dias)`, R(dados.encargo)],
-      ['Valor líquido a receber pelo Cedente', R(dados.valorLiquidoCliente)],
-      ['Prazo até vencimento', `${dados.prazo} dias`],
-      ['Data de emissão', dados.dataEmissao],
-      ['Data de vencimento', dados.dataVencimento],
+      ['Valor nominal do título (face value)', R(dados.valor)],
+      [`Fator de compra – taxa de cessão (${dados.taxaCliente.toFixed(4)}% a.m. × ${dados.prazo} dias)`, R(dados.encargo)],
+      ['Valor líquido a ser pago ao CEDENTE (art. 290 CC)', R(dados.valorLiquidoCliente)],
+      ['Prazo total até o vencimento', `${dados.prazo} dias`],
+      ['Data de emissão do título', dados.dataEmissao],
+      ['Data de vencimento do título', dados.dataVencimento],
     ],
-    styles: { fontSize: 9, cellPadding: 3 },
-    headStyles: { fillColor: [15, 23, 42], textColor: 255, fontStyle: 'bold' },
-    alternateRowStyles: { fillColor: [245, 247, 252] },
-    columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' } },
+    styles: { fontSize: 8.5, cellPadding: 3 },
+    headStyles: { fillColor: [15, 23, 42], textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
+    alternateRowStyles: { fillColor: [245, 248, 255] },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 120 }, 1: { halign: 'right' } },
   });
 
-  y = (doc as any).lastAutoTable.finalY + 10;
+  y = (doc as any).lastAutoTable.finalY + 6;
+  y = paragrafo(doc,
+    `2.2. O valor líquido de ${R(dados.valorLiquidoCliente)} será pago ao CEDENTE em até 1 (um) dia útil contado da assinatura deste instrumento e da entrega física ou digital do título, mediante transferência bancária para conta de titularidade do CEDENTE previamente informada.`,
+    y, L, W);
 
-  // ── Cláusulas ────────────────────────────────────────────
-  if (y > 220) { doc.addPage(); y = 20; }
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.setTextColor(15, 23, 42);
-  doc.text('DAS CLÁUSULAS GERAIS', L, y);
-  y += 6;
-
-  const clausulas = [
-    '1. O CEDENTE declara que o crédito cedido é de sua exclusiva titularidade, inexistindo ônus, gravame ou litígio.',
-    '2. A cessão ora contratada é definitiva, perfeita e acabada, transferindo-se todos os direitos sobre o título para a CESSIONÁRIA.',
-    '3. O CEDENTE responde pela existência, liquidez e certeza do crédito cedido, na forma do art. 295 do Código Civil.',
-    '4. O pagamento ao CEDENTE ocorrerá somente após a assinatura digital deste contrato e confirmação do aceite.',
-    '5. Fica eleito o foro da Comarca de São Paulo/SP para dirimir quaisquer controvérsias.',
+  // ── CLÁUSULA 3ª ─────────────────────────────────────────────────
+  y = secao(doc, 'CLÁUSULA TERCEIRA – DAS DECLARAÇÕES E GARANTIAS DO CEDENTE', y, L);
+  const garantias = [
+    '3.1. O CEDENTE declara, sob as penas da lei, que o crédito cedido é de sua exclusiva titularidade, originado de legítima transação comercial já concluída e que o bem ou serviço correspondente foi efetivamente entregue ou prestado ao DEVEDOR.',
+    '3.2. O CEDENTE garante que o título cedido não está sujeito a qualquer ônus, gravame, penhora, alienação fiduciária, arresto, sequestro, garantia pignoratícia ou qualquer outra restrição que impeça ou comprometa a cessão ora realizada.',
+    '3.3. O CEDENTE declara que não existe contra si qualquer ação judicial, procedimento administrativo ou arbitral que possa afetar a validade ou a exigibilidade do crédito cedido.',
+    '3.4. O CEDENTE afirma que o título é legítimo, verdadeiro e que a assinatura nele aposta é autêntica, respondendo civil e criminalmente em caso de falsidade (CP, arts. 171 e 297).',
+    '3.5. O CEDENTE garante a existência e a liquidez do crédito cedido, nos termos do art. 295 do Código Civil, respondendo pela evicção em caso de redução, extinção ou ineficácia do crédito por fato anterior à cessão.',
   ];
+  for (const g of garantias) { y = paragrafo(doc, g, y, L, W); }
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  doc.setTextColor(50, 50, 70);
-  for (const c of clausulas) {
-    const linhas = doc.splitTextToSize(c, W);
-    doc.text(linhas, L, y);
-    y += linhas.length * 4.5 + 2;
-  }
+  // ── CLÁUSULA 4ª ─────────────────────────────────────────────────
+  y = secao(doc, 'CLÁUSULA QUARTA – DA CO-OBRIGAÇÃO E RESPONSABILIDADE DO CEDENTE', y, L);
+  y = paragrafo(doc,
+    '4.1. Sem prejuízo do caráter pro soluto desta cessão quanto ao risco de crédito ordinário do DEVEDOR, o CEDENTE assume co-obrigação solidária e irretratável em relação ao crédito cedido nas seguintes hipóteses:',
+    y, L, W);
+  const coobrig = [
+    'a) Comprovada inexistência, nulidade, anulabilidade ou falsidade do título cedido;',
+    'b) Recusa de pagamento pelo DEVEDOR fundamentada em vício, defeito ou inexistência da operação que originou o título;',
+    'c) Qualquer fato anterior à cessão que torne o crédito inexigível, de valor inferior ao declarado ou juridicamente ineficaz;',
+    'd) Descumprimento de qualquer declaração ou garantia prestada na Cláusula Terceira deste instrumento.',
+  ];
+  for (const c of coobrig) { y = paragrafo(doc, c, y, L + 5, W - 5); }
+  y = paragrafo(doc,
+    '4.2. Nas hipóteses do item 4.1, o CEDENTE obriga-se a restituir à CESSIONÁRIA o valor integral pago (item 2.2), acrescido de multa de 10% (dez por cento), juros de mora de 1% (um por cento) ao mês e correção monetária pelo IPCA, a contar da data do pagamento, nos termos dos arts. 394 a 396 e 408 do Código Civil.',
+    y, L, W);
 
-  y += 8;
+  // ── CLÁUSULA 5ª ─────────────────────────────────────────────────
+  y = secao(doc, 'CLÁUSULA QUINTA – DO INADIMPLEMENTO DO DEVEDOR', y, L);
+  y = paragrafo(doc,
+    '5.1. Ressalvadas as hipóteses da Cláusula Quarta, o risco do inadimplemento ordinário do DEVEDOR é assumido integralmente pela CESSIONÁRIA, não podendo a CESSIONÁRIA voltar-se contra o CEDENTE pela mera falta de pagamento na data do vencimento.',
+    y, L, W);
+  y = paragrafo(doc,
+    '5.2. Em caso de inadimplemento do DEVEDOR, a CESSIONÁRIA adotará as medidas de cobrança extrajudicial e judicial que entender cabíveis, incluindo o protesto do título (Lei nº 9.492/1997), ação de execução (CPC, arts. 783 e ss.) e demais providências legais, sem necessidade de aviso prévio ao CEDENTE.',
+    y, L, W);
+  y = paragrafo(doc,
+    '5.3. O DEVEDOR será notificado da cessão na forma do art. 290 do Código Civil, tornando-se obrigado a pagar exclusivamente à CESSIONÁRIA a partir da ciência da notificação.',
+    y, L, W);
 
-  // ── Assinaturas ──────────────────────────────────────────
-  if (y > 240) { doc.addPage(); y = 20; }
+  // ── CLÁUSULA 6ª ─────────────────────────────────────────────────
+  y = secao(doc, 'CLÁUSULA SEXTA – DOS ENCARGOS MORATÓRIOS', y, L);
+  y = paragrafo(doc,
+    '6.1. O inadimplemento de qualquer obrigação pecuniária prevista neste contrato sujeitará a parte devedora ao pagamento de: (i) multa moratória de 2% (dois por cento) sobre o valor devido; (ii) juros de mora de 1% (um por cento) ao mês, pro rata die; e (iii) correção monetária pelo índice IPCA/IBGE, nos termos do art. 395, parágrafo único, do Código Civil.',
+    y, L, W);
+  y = paragrafo(doc,
+    '6.2. Em caso de cobrança judicial ou extrajudicial, os honorários advocatícios serão suportados pela parte inadimplente, fixados em 20% (vinte por cento) sobre o valor total do débito, nos termos do art. 395 do Código Civil e art. 85 do CPC.',
+    y, L, W);
 
+  // ── CLÁUSULA 7ª ─────────────────────────────────────────────────
+  y = secao(doc, 'CLÁUSULA SÉTIMA – DO VENCIMENTO ANTECIPADO', y, L);
+  y = paragrafo(doc,
+    '7.1. As obrigações do CEDENTE previstas neste contrato serão consideradas vencidas antecipadamente, independentemente de aviso ou notificação, nas seguintes hipóteses: (i) pedido de recuperação judicial ou extrajudicial, ou decretação de falência do CEDENTE; (ii) protesto de título de valor superior a R$ 5.000,00 (cinco mil reais) em nome do CEDENTE; (iii) comprovação de fraude ou falsidade em qualquer declaração prestada neste instrumento; (iv) dissolução ou liquidação da pessoa jurídica CEDENTE.',
+    y, L, W);
+
+  // ── CLÁUSULA 8ª ─────────────────────────────────────────────────
+  y = secao(doc, 'CLÁUSULA OITAVA – DA NOTIFICAÇÃO DO DEVEDOR E ENDOSSO', y, L);
+  y = paragrafo(doc,
+    '8.1. O CEDENTE, neste ato, por força da cessão, concede à CESSIONÁRIA poderes irrevogáveis para notificar o DEVEDOR da cessão, nos termos do art. 290 do Código Civil, e para receber o pagamento do título em seu próprio nome.',
+    y, L, W);
+  y = paragrafo(doc,
+    '8.2. O título de crédito objeto desta cessão será entregue à CESSIONÁRIA acompanhado de endosso em preto ou em branco, conforme o tipo do título, transferindo plena titularidade e direitos cambiários à CESSIONÁRIA nos termos da Lei nº 7.357/1985 (cheque), Decreto 2.044/1908 e Decreto-Lei 167/1967 (cédulas) e legislação aplicável.',
+    y, L, W);
+
+  // ── CLÁUSULA 9ª ─────────────────────────────────────────────────
+  y = secao(doc, 'CLÁUSULA NONA – DAS DISPOSIÇÕES GERAIS', y, L);
+  const gerais = [
+    '9.1. Este contrato é celebrado em caráter irrevogável e irretratável, obrigando as partes e seus sucessores a qualquer título.',
+    '9.2. A tolerância de qualquer das partes quanto ao descumprimento de obrigação pela outra não implica novação, renúncia ou alteração das condições aqui estabelecidas.',
+    '9.3. A eventual nulidade ou ineficácia de qualquer cláusula deste contrato não compromete a validade das demais, que continuarão em pleno vigor (princípio da conservação do negócio jurídico – art. 184 CC).',
+    '9.4. As partes elegem a assinatura digital com certificado ICP-Brasil ou assinatura eletrônica com validade legal como forma equivalente à assinatura manuscrita, nos termos da Lei nº 14.063/2020 e MP nº 2.200-2/2001.',
+    '9.5. Este contrato é regido pelas leis da República Federativa do Brasil, em especial pelo Código Civil (Lei nº 10.406/2002), pelo Código de Processo Civil (Lei nº 13.105/2015) e pelas normas aplicáveis ao mercado de fomento mercantil.',
+  ];
+  for (const g of gerais) { y = paragrafo(doc, g, y, L, W); }
+
+  // ── CLÁUSULA 10ª ────────────────────────────────────────────────
+  y = secao(doc, 'CLÁUSULA DÉCIMA – DO FORO DE ELEIÇÃO', y, L);
+  y = paragrafo(doc,
+    `10.1. As partes elegem, de forma irrevogável, o foro da ${EMPRESA.foro}, com renúncia expressa a qualquer outro, por mais privilegiado que seja, para dirimir quaisquer questões oriundas deste contrato, nos termos do art. 63 do Código de Processo Civil.`,
+    y, L, W);
+
+  // ── ASSINATURAS ─────────────────────────────────────────────────
+  const r2 = addPage(doc, y + 40);
+  y = r2.y + 8;
+
+  doc.setDrawColor(180, 190, 210);
+  doc.setLineWidth(0.3);
   doc.line(L, y, 210 - L, y);
-  y += 8;
+  y += 7;
 
+  doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(80, 80, 100);
-  doc.text('São Paulo, _____ de __________________ de 20____', L, y);
+  doc.setTextColor(60, 60, 80);
+  doc.text(`Imperatriz – MA, _____ de __________________________ de 20_____`, L, y);
   y += 14;
 
-  const colunaL = L;
-  const colunaR = 120;
-  doc.line(colunaL, y, colunaL + 70, y);
-  doc.line(colunaR, y, colunaR + 70, y);
-  y += 4;
-  doc.text('Efficaz Factoring (Cessionária)', colunaL, y);
-  doc.text(`${dados.emitenteNome}`, colunaR, y);
-  y += 4;
-  doc.setFontSize(7.5);
-  doc.setTextColor(140, 140, 160);
-  doc.text('CNPJ: 00.000.000/0001-00', colunaL, y);
-  doc.text(`CPF/CNPJ: ${dados.emitenteCpfCnpj}`, colunaR, y);
+  // Assinatura esquerda
+  doc.line(L, y, L + 78, y);
+  doc.line(112, y, 112 + 78, y);
+  y += 5;
 
-  // ── Rodapé ───────────────────────────────────────────────
-  const totalPaginas = (doc as any).getNumberOfPages();
-  for (let i = 1; i <= totalPaginas; i++) {
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.text(EMPRESA.razaoSocial, L, y, { maxWidth: 78 });
+  doc.text(dados.emitenteNome, 112, y, { maxWidth: 78 });
+  y += 4;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(110, 110, 130);
+  doc.text(`CNPJ: ${EMPRESA.cnpj}`, L, y);
+  doc.text(`CPF/CNPJ: ${dados.emitenteCpfCnpj}`, 112, y);
+  y += 4;
+  doc.text('CESSIONÁRIA', L, y);
+  doc.text('CEDENTE', 112, y);
+  y += 12;
+
+  // Testemunhas
+  doc.setTextColor(100, 100, 120);
+  doc.setFontSize(7.5);
+  doc.text('Testemunha 1:', L, y);
+  doc.text('Testemunha 2:', 112, y);
+  y += 4;
+  doc.line(L, y, L + 78, y);
+  doc.line(112, y, 112 + 78, y);
+  y += 4;
+  doc.text('Nome: _________________________________', L, y);
+  doc.text('Nome: _________________________________', 112, y);
+  y += 4;
+  doc.text('CPF: __________________________________', L, y);
+  doc.text('CPF: __________________________________', 112, y);
+
+  // ── RODAPÉ ──────────────────────────────────────────────────────
+  const totalPags = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPags; i++) {
     doc.setPage(i);
-    doc.setFontSize(7);
-    doc.setTextColor(160, 160, 180);
+    doc.setFillColor(15, 23, 42);
+    doc.rect(0, 284, 210, 13, 'F');
+    doc.setFontSize(6.5);
+    doc.setTextColor(160, 175, 210);
     doc.text(
-      `Efficaz Factoring — Contrato de Cessão nº ${dados.numero} — Pág. ${i}/${totalPaginas}`,
-      105,
-      290,
-      { align: 'center' }
-    );
+      `${EMPRESA.razaoSocial}  ·  CNPJ ${EMPRESA.cnpj}  ·  ${EMPRESA.endereco}, ${EMPRESA.cidade}  ·  ${EMPRESA.email}`,
+      105, 289, { align: 'center' });
+    doc.text(
+      `Contrato nº ${dados.numero}  —  Página ${i} de ${totalPags}`,
+      105, 294, { align: 'center' });
   }
 
   doc.save(`contrato-${dados.numero}.pdf`);

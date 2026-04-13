@@ -10,7 +10,7 @@ const MESES = [
   'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
   'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro',
 ];
-const ANOS = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
+const ANOS = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() + i);
 
 type Dados = {
   totaisGeral: any;
