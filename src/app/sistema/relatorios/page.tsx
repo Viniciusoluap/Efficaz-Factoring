@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { formatarMoeda } from '@/lib/calculos';
-import { BarChart3, FileDown, Filter, RefreshCw, Pencil, Trash2, Loader2, AlertTriangle } from 'lucide-react';
+import { BarChart3, FileDown, Filter, RefreshCw, Pencil, Trash2, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -34,6 +34,7 @@ export default function RelatoriosPage() {
   const [gerando, setGerando] = useState(false);
   const [confirmDelId, setConfirmDelId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [baixandoId, setBaixandoId] = useState<string | null>(null);
 
   const carregar = useCallback(() => {
     setLoading(true);
@@ -56,6 +57,17 @@ export default function RelatoriosPage() {
     await fetch(`/api/titulos/${id}`, { method: 'DELETE' });
     setDeletingId(null);
     setConfirmDelId(null);
+    carregar();
+  };
+
+  const darBaixa = async (id: string) => {
+    setBaixandoId(id);
+    await fetch(`/api/titulos/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'LIQUIDADO' }),
+    });
+    setBaixandoId(null);
     carregar();
   };
 
@@ -402,6 +414,18 @@ export default function RelatoriosPage() {
                               >
                                 <Pencil className="w-3.5 h-3.5" />
                               </Link>
+                              {t.status !== 'LIQUIDADO' && (
+                                <button
+                                  onClick={() => darBaixa(t.id)}
+                                  disabled={baixandoId === t.id}
+                                  className="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors disabled:opacity-50"
+                                  title="Dar baixa (marcar como pago)"
+                                >
+                                  {baixandoId === t.id
+                                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    : <CheckCircle2 className="w-3.5 h-3.5" />}
+                                </button>
+                              )}
                               <button
                                 onClick={() => setConfirmDelId(t.id)}
                                 className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
