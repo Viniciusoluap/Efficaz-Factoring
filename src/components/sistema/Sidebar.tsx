@@ -12,7 +12,7 @@ import {
 
 const navItems = [
   { href: '/sistema/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/sistema/titulos', label: 'Títulos', icon: FileText },
+  { href: '/sistema/titulos', label: 'Custódias', icon: FileText },
   { href: '/sistema/calcular', label: 'Calculadora', icon: Calculator },
   { href: '/sistema/clientes', label: 'Clientes', icon: Users },
   { href: '/sistema/fornecedores', label: 'Fornecedores', icon: Building2 },

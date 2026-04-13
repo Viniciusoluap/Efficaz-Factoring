@@ -8,8 +8,8 @@ import { ptBR } from 'date-fns/locale';
 
 const titulos: Record<string, string> = {
   '/sistema/dashboard': 'Dashboard',
-  '/sistema/titulos': 'Títulos',
-  '/sistema/titulos/novo': 'Novo Título',
+  '/sistema/titulos': 'Custódias',
+  '/sistema/titulos/novo': 'Nova Custódia',
   '/sistema/calcular': 'Calculadora Financeira',
   '/sistema/vencimentos': 'Vencimentos',
   '/sistema/clientes': 'Clientes',
