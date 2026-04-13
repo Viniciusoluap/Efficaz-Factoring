@@ -3,34 +3,38 @@
 import { useEffect, useState, FormEvent } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
-import { differenceInDays } from 'date-fns';
+import { ArrowLeft, Save, AlertCircle, Loader2, RefreshCw, CalendarClock } from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { calcularOperacao, calcularFiscal } from '@/lib/calculos';
 
 const inputCls = 'w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 bg-gray-50 focus:bg-white transition-all';
-const readCls = 'w-full px-3 py-2.5 border border-gray-100 rounded-xl text-sm bg-gray-100 text-gray-500 cursor-not-allowed';
 
 function calcular(valor: number, taxaCliente: number, taxaFornecedor: number, dataEmissao: string, dataVencimento: string) {
   if (!dataEmissao || !dataVencimento || !valor || !taxaCliente) return null;
-  const prazo = differenceInDays(new Date(dataVencimento), new Date(dataEmissao));
-  if (prazo <= 0) return null;
-  const tcDecimal = taxaCliente / 100;
-  const tfDecimal = taxaFornecedor / 100;
-  let encargo = ((valor * tcDecimal) / 30) * prazo;
-  if (encargo < 50) encargo = 50;
-  const valorLiquidoCliente = valor - encargo;
-  const custoCedente = ((valor * tfDecimal) / 30) * prazo;
-  const spreadBruto = encargo - custoCedente;
-  const impostoProvisao = spreadBruto > 0 ? Math.round(spreadBruto * 0.07 * 100) / 100 : 0;
-  const spreadLiquido = Math.round((spreadBruto - impostoProvisao) * 100) / 100;
-  return {
-    prazo,
-    encargo: Math.round(encargo * 100) / 100,
-    valorLiquidoCliente: Math.round(valorLiquidoCliente * 100) / 100,
-    custoCedente: Math.round(custoCedente * 100) / 100,
-    spreadBruto: Math.round(spreadBruto * 100) / 100,
-    impostoProvisao,
-    spreadLiquido,
-  };
+  try {
+    const resultado = calcularOperacao({
+      valor,
+      taxaCliente,
+      taxaFornecedor,
+      dataEmissao: new Date(dataEmissao + 'T00:00:00'),
+      dataVencimento: new Date(dataVencimento + 'T00:00:00'),
+    });
+    const fiscal = calcularFiscal(resultado, valor, resultado.prazoEfetivo);
+    return {
+      prazo: resultado.prazo,
+      prazoEfetivo: resultado.prazoEfetivo,
+      dataD2: resultado.dataD2,
+      encargo: resultado.encargo,
+      valorLiquidoCliente: resultado.valorLiquidoCliente,
+      custoCedente: resultado.custoCedente,
+      spreadBruto: resultado.spreadBruto,
+      impostoProvisao: fiscal.impostoProvisao,
+      spreadLiquido: fiscal.spreadLiquido,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export default function EditarTituloPage() {
@@ -55,7 +59,8 @@ export default function EditarTituloPage() {
     taxaFornecedor: '',
   });
 
-  const [calc, setCalc] = useState<ReturnType<typeof calcular>>(null);
+  type CalcResult = NonNullable<ReturnType<typeof calcular>>;
+  const [calc, setCalc] = useState<CalcResult | null>(null);
 
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
 
@@ -247,21 +252,28 @@ export default function EditarTituloPage() {
           </div>
 
           {calc && (
-            <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
-              {[
-                { label: 'Prazo', value: `${calc.prazo} dias` },
-                { label: 'Encargo', value: R(calc.encargo) },
-                { label: 'Líquido Cliente', value: R(calc.valorLiquidoCliente) },
-                { label: 'Custo Cedente', value: R(calc.custoCedente) },
-                { label: 'Spread Bruto', value: R(calc.spreadBruto) },
-                { label: 'Imposto Prov.', value: R(calc.impostoProvisao) },
-                { label: 'Spread Líquido', value: R(calc.spreadLiquido) },
-              ].map(({ label, value }) => (
-                <div key={label}>
-                  <p className="text-xs text-gray-500 mb-0.5">{label}</p>
-                  <p className="text-sm font-semibold text-gray-800">{value}</p>
-                </div>
-              ))}
+            <div className="pt-3 border-t border-gray-100 space-y-3">
+              <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2">
+                <CalendarClock className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span className="text-xs text-blue-700">
+                  Prazo face: <strong>{calc.prazo}d</strong> · Prazo D+2 efetivo: <strong>{calc.prazoEfetivo}d</strong> · Liberação: <strong>{format(calc.dataD2, "dd/MM/yyyy (EEE)", { locale: ptBR })}</strong>
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { label: 'Encargo (D+2)', value: R(calc.encargo) },
+                  { label: 'Líquido Cliente', value: R(calc.valorLiquidoCliente) },
+                  { label: 'Custo Cedente', value: R(calc.custoCedente) },
+                  { label: 'Spread Bruto', value: R(calc.spreadBruto) },
+                  { label: 'Imposto Prov.', value: R(calc.impostoProvisao) },
+                  { label: 'Spread Líquido', value: R(calc.spreadLiquido) },
+                ].map(({ label, value }) => (
+                  <div key={label}>
+                    <p className="text-xs text-gray-500 mb-0.5">{label}</p>
+                    <p className="text-sm font-semibold text-gray-800">{value}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

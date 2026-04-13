@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
         const fiscal = calcularFiscal(
           resultado,
           parseFloat(t.valor),
-          resultado.prazo,
+          resultado.prazoEfetivo,
           Number(config?.taxaMinimaFiscal ?? 0.5),
           Number(config?.aliquotaImposto ?? 7),
         );

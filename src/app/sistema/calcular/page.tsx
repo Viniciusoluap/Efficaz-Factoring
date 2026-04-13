@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { calcularOperacao, calcularFiscal, formatarMoeda, formatarPorcentagem } from '@/lib/calculos';
 import { differenceInDays, format, addDays, isValid, parseISO } from 'date-fns';
-import { Calculator, TrendingUp, ArrowRight, Info, Copy, CheckCheck } from 'lucide-react';
+import { Calculator, TrendingUp, ArrowRight, Info, Copy, CheckCheck, CalendarClock } from 'lucide-react';
+import { ptBR } from 'date-fns/locale';
 
 function parseData(str: string) {
   if (!str) return null;
@@ -74,7 +75,7 @@ export default function CalcularPage() {
         dataVencimento: new Date(dataVencimento + 'T00:00:00'),
       });
       setResultado(r);
-      setFiscal(calcularFiscal(r, parseFloat(valor), r.prazo));
+      setFiscal(calcularFiscal(r, parseFloat(valor), r.prazoEfetivo));
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Erro no cálculo.');
     }
@@ -82,7 +83,7 @@ export default function CalcularPage() {
 
   const copiarResumo = () => {
     if (!resultado || !fiscal) return;
-    const txt = `EFFICAZ FACTORING — SIMULAÇÃO\n\nValor: ${formatarMoeda(parseFloat(valor))}\nPrazo: ${resultado.prazo} dias\nTaxa Cliente: ${taxaCliente}% a.m.\nTaxa Fornecedor: ${taxaFornecedor}% a.m.\n\nEncargo: ${formatarMoeda(resultado.encargo)}\nLíquido Cliente: ${formatarMoeda(resultado.valorLiquidoCliente)}\nCusto Cedente: ${formatarMoeda(resultado.custoCedente)}\nSpread Bruto: ${formatarMoeda(resultado.spreadBruto)}\nImposto Prov.: ${formatarMoeda(fiscal.impostoProvisao)}\nSpread Líquido: ${formatarMoeda(fiscal.spreadLiquido)}`;
+    const txt = `EFFICAZ FACTORING — SIMULAÇÃO\n\nValor: ${formatarMoeda(parseFloat(valor))}\nPrazo: ${resultado.prazo} dias (D+2 efetivo: ${resultado.prazoEfetivo} dias)\nLiberação D+2: ${format(resultado.dataD2, 'dd/MM/yyyy')}\nTaxa Cliente: ${taxaCliente}% a.m.\nTaxa Fornecedor: ${taxaFornecedor}% a.m.\n\nEncargo: ${formatarMoeda(resultado.encargo)}\nLíquido Cliente: ${formatarMoeda(resultado.valorLiquidoCliente)}\nCusto Cedente: ${formatarMoeda(resultado.custoCedente)}\nSpread Bruto: ${formatarMoeda(resultado.spreadBruto)}\nImposto Prov.: ${formatarMoeda(fiscal.impostoProvisao)}\nSpread Líquido: ${formatarMoeda(fiscal.spreadLiquido)}`;
     navigator.clipboard.writeText(txt).then(() => {
       setCopiado(true);
       setTimeout(() => setCopiado(false), 2000);
@@ -155,13 +156,22 @@ export default function CalcularPage() {
           {/* Motor financeiro */}
           <div className="bg-gradient-to-br from-blue-950 to-slate-900 rounded-2xl p-6 text-white">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="font-semibold flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-amber-400" />
-                Resultado Financeiro
-                <span className="ml-2 text-xs bg-amber-400/20 text-amber-400 px-2 py-0.5 rounded-full">
-                  {resultado.prazo} dias
-                </span>
-              </h3>
+              <div>
+                <h3 className="font-semibold flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-amber-400" />
+                  Resultado Financeiro
+                  <span className="text-xs bg-white/10 text-white/70 px-2 py-0.5 rounded-full">
+                    {resultado.prazo}d face
+                  </span>
+                  <span className="text-xs bg-amber-400/20 text-amber-400 px-2 py-0.5 rounded-full font-semibold">
+                    {resultado.prazoEfetivo}d D+2
+                  </span>
+                </h3>
+                <p className="text-xs text-white/40 mt-1 flex items-center gap-1">
+                  <CalendarClock className="w-3 h-3" />
+                  Liberação D+2: <span className="text-white/70 font-medium ml-1">{format(resultado.dataD2, "dd/MM/yyyy (EEE)", { locale: ptBR })}</span>
+                </p>
+              </div>
               <button onClick={copiarResumo}
                 className="flex items-center gap-1.5 text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors">
                 {copiado ? <CheckCheck className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}

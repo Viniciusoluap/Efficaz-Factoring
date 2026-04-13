@@ -2,14 +2,20 @@
  * Motor de Cálculo Financeiro — Efficaz Factoring
  *
  * Fórmulas:
- * Encargo = ((Valor × TaxaCliente) ÷ 30) × Prazo
+ * Encargo = ((Valor × TaxaCliente) ÷ 30) × PrazoEfetivo (D+2)
  * Se Encargo < 50, usar 50
  * ValorLiquidoCliente = Valor - Encargo
- * CustoCedente = ((Valor × TaxaFornecedor) ÷ 30) × Prazo
+ * CustoCedente = ((Valor × TaxaFornecedor) ÷ 30) × PrazoEfetivo
  * SpreadBruto = Encargo - CustoCedente
+ *
+ * Regra D+2 (compensação bancária):
+ * Após o vencimento, o recurso leva 2 "dias úteis bancários" para
+ * ficar disponível. Sábado é válido como D+2 (destino final) mas não
+ * como D+1 (passo intermediário). Domingo nunca conta.
+ * Ex.: quinta → D+1=sex, D+2=sáb  |  sexta → D+1=seg, D+2=ter
  */
 
-import { differenceInDays } from 'date-fns';
+import { differenceInDays, addDays } from 'date-fns';
 
 export interface EntradaCalculo {
   valor: number;
@@ -20,7 +26,9 @@ export interface EntradaCalculo {
 }
 
 export interface ResultadoCalculo {
-  prazo: number;
+  prazo: number;          // dias originais: emissão → vencimento (face do título)
+  prazoEfetivo: number;   // dias usados no cálculo: emissão → D+2
+  dataD2: Date;           // data de liberação D+2
   encargo: number;
   valorLiquidoCliente: number;
   custoCedente: number;
@@ -39,26 +47,56 @@ export interface ResultadoFiscal {
   aliquotaEfetiva: number;
 }
 
+/**
+ * Calcula a data de liberação D+2 a partir de uma data de vencimento.
+ *
+ * Regra:
+ *  - Sábado NÃO conta como D+1 (passo intermediário), mas conta como D+2.
+ *  - Domingo NUNCA conta.
+ *
+ * Exemplos:
+ *  - Quinta  → D+1=sex, D+2=sáb  → libera sábado
+ *  - Sexta   → D+1=seg, D+2=ter  → libera terça (pula sáb e dom)
+ *  - Sábado  → D+1=seg, D+2=ter  → libera terça
+ *  - Domingo → D+1=seg, D+2=ter  → libera terça
+ */
+export function calcularDataD2(dataVencimento: Date): Date {
+  let count = 0;
+  let current = new Date(dataVencimento);
+
+  while (count < 2) {
+    current = addDays(current, 1);
+    const dow = current.getDay(); // 0=Dom, 1=Seg … 5=Sex, 6=Sáb
+
+    if (dow === 0) continue;              // domingo: sempre pula
+    if (dow === 6 && count === 0) continue; // sábado como D+1: pula
+
+    count++;
+  }
+
+  return current;
+}
+
 export function calcularOperacao(entrada: EntradaCalculo): ResultadoCalculo {
   const { valor, taxaCliente, taxaFornecedor, dataEmissao, dataVencimento } = entrada;
 
   const prazo = differenceInDays(dataVencimento, dataEmissao);
   if (prazo <= 0) throw new Error('Data de vencimento deve ser posterior à data de emissão.');
 
+  // Data e prazo efetivos considerando D+2
+  const dataD2 = calcularDataD2(dataVencimento);
+  const prazoEfetivo = differenceInDays(dataD2, dataEmissao);
+
   // Taxas em decimal
   const tcDecimal = taxaCliente / 100;
   const tfDecimal = taxaFornecedor / 100;
 
-  // Encargo do cliente
-  let encargo = ((valor * tcDecimal) / 30) * prazo;
+  // Encargo e custo calculados sobre o prazo efetivo (D+2)
+  let encargo = ((valor * tcDecimal) / 30) * prazoEfetivo;
   if (encargo < 50) encargo = 50;
 
   const valorLiquidoCliente = valor - encargo;
-
-  // Custo do cedente (fornecedor de capital)
-  const custoCedente = ((valor * tfDecimal) / 30) * prazo;
-
-  // Spread bruto
+  const custoCedente = ((valor * tfDecimal) / 30) * prazoEfetivo;
   const spreadBruto = encargo - custoCedente;
 
   // Taxas ao ano (base 360)
@@ -69,6 +107,8 @@ export function calcularOperacao(entrada: EntradaCalculo): ResultadoCalculo {
 
   return {
     prazo,
+    prazoEfetivo,
+    dataD2,
     encargo: arredondar(encargo),
     valorLiquidoCliente: arredondar(valorLiquidoCliente),
     custoCedente: arredondar(custoCedente),
@@ -81,21 +121,17 @@ export function calcularOperacao(entrada: EntradaCalculo): ResultadoCalculo {
 
 /**
  * Motor Fiscal — Lucro Presumido
- *
- * Cria "espelho fiscal" com a menor taxa permitida (taxaMinima)
- * para reduzir a base tributária. Imposto calculado sobre o
- * lucro do espelho (~6% a 8%) e descontado antes dos repasses.
+ * Usa o prazoEfetivo (D+2) para calcular o espelho fiscal.
  */
 export function calcularFiscal(
   resultado: ResultadoCalculo,
   valor: number,
-  prazo: number,
-  taxaMinima: number = 0.5,  // % ao mês (mínimo permitido)
-  aliquotaImposto: number = 7 // %
+  prazoEfetivo: number,
+  taxaMinima: number = 0.5,
+  aliquotaImposto: number = 7
 ): ResultadoFiscal {
-  // Recalcula com a taxa mínima (espelho fiscal)
   const txEspelhoDecimal = taxaMinima / 100;
-  const baseEspelho = ((valor * txEspelhoDecimal) / 30) * prazo;
+  const baseEspelho = ((valor * txEspelhoDecimal) / 30) * prazoEfetivo;
   const lucroEspelho = resultado.spreadBruto - baseEspelho;
 
   const impostoProvisao = lucroEspelho > 0
