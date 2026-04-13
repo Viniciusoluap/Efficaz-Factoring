@@ -131,7 +131,7 @@ export default async function TitulosPage() {
               const { label: sLabel, cls: sCls } = opStatusLabel(op.status);
               const temPendente = op.titulos.some(t => t.status === TituloStatus.PENDENTE);
               const temVencido = op.titulos.some(t => t.status === TituloStatus.VENCIDO);
-              const tiposUnicos = [...new Set(op.titulos.map(t => t.tipo))];
+              const tiposUnicos = Array.from(new Set(op.titulos.map(t => t.tipo)));
 
               return (
                 <Link
