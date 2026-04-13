@@ -4,10 +4,7 @@ import { TituloStatus, TituloTipo } from '@prisma/client';
 import { format } from 'date-fns';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import {
-  ArrowLeft, FileText, Layers, User, Building2,
-  Calendar, TrendingUp, Percent,
-} from 'lucide-react';
+import { ArrowLeft, FileText, Layers } from 'lucide-react';
 
 const statusLabel: Record<TituloStatus, string> = {
   PENDENTE: 'Pendente', APROVADO: 'Aprovado', VENCIDO: 'Vencido',
