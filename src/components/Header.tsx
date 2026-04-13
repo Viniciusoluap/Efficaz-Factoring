@@ -92,27 +92,10 @@ export default function Header() {
             ))}
           </nav>
 
-          {/* CTA Buttons */}
-          <div className="hidden lg:flex items-center gap-3">
-            <a
-              href="/login"
-              className={`text-sm font-medium px-4 py-2 rounded-lg border transition-colors ${
-                isScrolled
-                  ? 'border-gray-300 text-gray-700 hover:bg-gray-100'
-                  : 'border-white/40 text-white hover:bg-white/10'
-              }`}
-            >
+          {/* CTA */}
+          <div className="hidden lg:flex items-center">
+            <a href="/login" className="btn-primary text-sm">
               Acessar Sistema
-            </a>
-            <a
-              href="#contato"
-              onClick={(e) => {
-                e.preventDefault();
-                handleNavClick('#contato');
-              }}
-              className="btn-primary text-sm"
-            >
-              Solicitar Análise
             </a>
           </div>
 
@@ -151,25 +134,8 @@ export default function Header() {
                   {link.label}
                 </a>
               ))}
-              <a
-                href="/login"
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isScrolled
-                    ? 'text-gray-700 hover:bg-gray-100'
-                    : 'text-white hover:bg-white/10'
-                }`}
-              >
+              <a href="/login" className="btn-primary text-sm mt-2">
                 Acessar Sistema
-              </a>
-              <a
-                href="#contato"
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleNavClick('#contato');
-                }}
-                className="btn-primary text-sm mt-2"
-              >
-                Solicitar Análise
               </a>
             </nav>
           </div>
