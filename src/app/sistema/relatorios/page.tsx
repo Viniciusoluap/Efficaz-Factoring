@@ -232,11 +232,11 @@ export default function RelatoriosPage() {
           {/* Resumo geral */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {[
-              { label: 'Total de Títulos', value: String(dados.totaisGeral._count?.id ?? 0), cor: 'text-gray-800' },
-              { label: 'Volume Total', value: formatarMoeda(Number(dados.totaisGeral._sum?.valor ?? 0)), cor: 'text-blue-600' },
-              { label: 'Encargos Totais', value: formatarMoeda(Number(dados.totaisGeral._sum?.encargo ?? 0)), cor: 'text-amber-600' },
-              { label: 'Spread Bruto Total', value: formatarMoeda(Number(dados.totaisGeral._sum?.spreadBruto ?? 0)), cor: 'text-purple-600' },
-              { label: 'Spread Líquido Total', value: formatarMoeda(Number(dados.totaisGeral._sum?.spreadLiquido ?? 0)), cor: 'text-green-600' },
+              { label: 'Total de Títulos', value: String(dados.totaisPeriodo._count?.id ?? 0), cor: 'text-gray-800' },
+              { label: 'Volume Total', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.valor ?? 0)), cor: 'text-blue-600' },
+              { label: 'Encargos Totais', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.encargo ?? 0)), cor: 'text-amber-600' },
+              { label: 'Spread Bruto Total', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.spreadBruto ?? 0)), cor: 'text-purple-600' },
+              { label: 'Spread Líquido Total', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.spreadLiquido ?? 0)), cor: 'text-green-600' },
             ].map(({ label, value, cor }) => (
               <div key={label} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
                 <p className={`text-xl font-bold ${cor}`}>{value}</p>

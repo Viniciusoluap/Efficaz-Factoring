@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getToken } from 'next-auth/jwt';
 import { prisma } from '@/lib/prisma';
 import { startOfMonth, endOfMonth } from 'date-fns';
 
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
+  const token = await getToken({ req });
+  if (!token) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
 
   const { searchParams } = req.nextUrl;
   const mes = parseInt(searchParams.get('mes') ?? String(new Date().getMonth() + 1));
