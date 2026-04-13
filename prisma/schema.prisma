@@ -78,7 +78,8 @@ model Cliente {
   criadoEm  DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  titulos Titulo[]
+  titulos    Titulo[]
+  operacoes  Operacao[]
 
   @@map("clientes")
 }
@@ -96,7 +97,8 @@ model Fornecedor {
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  titulos Titulo[]
+  titulos    Titulo[]
+  operacoes  Operacao[]
 
   @@map("fornecedores")
 }
@@ -128,6 +130,8 @@ model Titulo {
   cliente             Cliente?     @relation(fields: [clienteId], references: [id])
   fornecedorId        String?
   fornecedor          Fornecedor?  @relation(fields: [fornecedorId], references: [id])
+  operacaoId          String?
+  operacao            Operacao?    @relation(fields: [operacaoId], references: [id])
   status              TituloStatus @default(PENDENTE)
   observacoes         String?
   criadoEm            DateTime     @default(now())
@@ -137,6 +141,25 @@ model Titulo {
   comunicacoes Comunicacao[]
 
   @@map("titulos")
+}
+
+model Operacao {
+  id             String      @id @default(cuid())
+  numero         String      @unique
+  taxaCliente    Decimal     @db.Decimal(8, 4)
+  taxaFornecedor Decimal     @db.Decimal(8, 4)
+  clienteId      String?
+  cliente        Cliente?    @relation(fields: [clienteId], references: [id])
+  fornecedorId   String?
+  fornecedor     Fornecedor? @relation(fields: [fornecedorId], references: [id])
+  observacoes    String?
+  status         String      @default("ABERTA")
+  criadoEm      DateTime    @default(now())
+  atualizadoEm  DateTime    @updatedAt
+
+  titulos Titulo[]
+
+  @@map("operacoes")
 }
 
 model Contrato {

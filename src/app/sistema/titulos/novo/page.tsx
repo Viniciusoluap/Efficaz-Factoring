@@ -3,37 +3,65 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { calcularOperacao, calcularFiscal, formatarMoeda } from '@/lib/calculos';
-import { differenceInDays, format } from 'date-fns';
-import { Save, Calculator, AlertCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { differenceInDays, format, addDays, isValid } from 'date-fns';
+import { Save, Calculator, AlertCircle, ArrowLeft, Plus, Trash2, ChevronDown, ChevronUp, CheckCircle2, Lock } from 'lucide-react';
 import Link from 'next/link';
 import OcrCheque from '@/components/sistema/OcrCheque';
 
 const hoje = format(new Date(), 'yyyy-MM-dd');
 
+type TituloItem = {
+  id: string;
+  tipo: string;
+  numero: string;
+  emitenteCpfCnpj: string;
+  emitenteNome: string;
+  sacadoCpfCnpj: string;
+  sacadoNome: string;
+  dataEmissao: string;
+  dataVencimento: string;
+  valor: string;
+};
+
+function novaTituloItem(): TituloItem {
+  return {
+    id: Math.random().toString(36).slice(2),
+    tipo: 'CHEQUE', numero: '', emitenteCpfCnpj: '', emitenteNome: '',
+    sacadoCpfCnpj: '', sacadoNome: '', dataEmissao: hoje, dataVencimento: '', valor: '',
+  };
+}
+
+function calcPreview(t: TituloItem, taxaCliente: string, taxaFornecedor: string) {
+  if (!t.valor || !t.dataEmissao || !t.dataVencimento || !taxaCliente || !taxaFornecedor) return null;
+  try {
+    const r = calcularOperacao({
+      valor: parseFloat(t.valor),
+      taxaCliente: parseFloat(taxaCliente),
+      taxaFornecedor: parseFloat(taxaFornecedor),
+      dataEmissao: new Date(t.dataEmissao + 'T00:00:00'),
+      dataVencimento: new Date(t.dataVencimento + 'T00:00:00'),
+    });
+    return r;
+  } catch { return null; }
+}
+
 export default function NovoTituloPage() {
   const router = useRouter();
+  const [etapa, setEtapa] = useState<'configurar' | 'titulos'>('configurar');
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState('');
 
-  const [form, setForm] = useState({
-    tipo: 'CHEQUE',
-    numero: '',
-    emitenteCpfCnpj: '',
-    emitenteNome: '',
-    sacadoCpfCnpj: '',
-    sacadoNome: '',
-    dataEmissao: hoje,
-    dataVencimento: '',
-    valor: '',
-    taxaCliente: '',
-    taxaFornecedor: '',
-    clienteId: '',
-    fornecedorId: '',
-    observacoes: '',
-  });
+  // Params fixos da operação
+  const [taxaCliente, setTaxaCliente] = useState('');
+  const [taxaFornecedor, setTaxaFornecedor] = useState('');
+  const [clienteId, setClienteId] = useState('');
+  const [fornecedorId, setFornecedorId] = useState('');
+  const [observacoes, setObservacoes] = useState('');
 
-  const [preview, setPreview] = useState<ReturnType<typeof calcularOperacao> | null>(null);
-  const [fiscal, setFiscal] = useState<ReturnType<typeof calcularFiscal> | null>(null);
+  // Lista de títulos
+  const [titulos, setTitulos] = useState<TituloItem[]>([novaTituloItem()]);
+  const [expandido, setExpandido] = useState<string>(titulos[0].id);
+
   const [clientes, setClientes] = useState<{ id: string; nome: string }[]>([]);
   const [fornecedores, setFornecedores] = useState<{ id: string; nome: string }[]>([]);
 
@@ -42,35 +70,58 @@ export default function NovoTituloPage() {
     fetch('/api/fornecedores?ativo=true').then(r => r.json()).then(setFornecedores).catch(() => {});
   }, []);
 
-  useEffect(() => {
-    const { valor, taxaCliente, taxaFornecedor, dataEmissao, dataVencimento } = form;
-    if (valor && taxaCliente && taxaFornecedor && dataEmissao && dataVencimento) {
-      try {
-        const resultado = calcularOperacao({
-          valor: parseFloat(valor),
-          taxaCliente: parseFloat(taxaCliente),
-          taxaFornecedor: parseFloat(taxaFornecedor),
-          dataEmissao: new Date(dataEmissao),
-          dataVencimento: new Date(dataVencimento),
-        });
-        setPreview(resultado);
-        setFiscal(calcularFiscal(resultado, parseFloat(valor), resultado.prazo));
-      } catch { setPreview(null); setFiscal(null); }
-    } else {
-      setPreview(null); setFiscal(null);
+  const setTitulo = (id: string, campo: keyof TituloItem, valor: string) => {
+    setTitulos(prev => prev.map(t => {
+      if (t.id !== id) return t;
+      const updated = { ...t, [campo]: valor };
+      // Sincroniza vencimento ao mudar emissão (mantém prazo se vencimento já existe)
+      if (campo === 'dataEmissao' && t.dataVencimento && valor) {
+        const emissao = new Date(valor + 'T00:00:00');
+        const venc = new Date(t.dataVencimento + 'T00:00:00');
+        if (isValid(emissao) && isValid(venc)) {
+          const dias = differenceInDays(venc, emissao);
+          if (dias > 0) return updated;
+        }
+      }
+      return updated;
+    }));
+  };
+
+  const adicionarTitulo = () => {
+    const novo = novaTituloItem();
+    setTitulos(prev => [...prev, novo]);
+    setExpandido(novo.id);
+  };
+
+  const removerTitulo = (id: string) => {
+    if (titulos.length === 1) return;
+    setTitulos(prev => prev.filter(t => t.id !== id));
+  };
+
+  const confirmarEtapa1 = () => {
+    if (!taxaCliente || !taxaFornecedor) {
+      setErro('Informe as taxas da operação para continuar.');
+      return;
     }
-  }, [form.valor, form.taxaCliente, form.taxaFornecedor, form.dataEmissao, form.dataVencimento]);
+    setErro('');
+    setEtapa('titulos');
+  };
 
-  const set = (k: string, v: string) => setForm(prev => ({ ...prev, [k]: v }));
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleFinalizar = async () => {
+    // Valida todos os títulos
+    for (const t of titulos) {
+      if (!t.tipo || !t.numero || !t.emitenteCpfCnpj || !t.emitenteNome ||
+          !t.sacadoCpfCnpj || !t.sacadoNome || !t.dataEmissao || !t.dataVencimento || !t.valor) {
+        setErro('Preencha todos os campos obrigatórios em todos os títulos.');
+        return;
+      }
+    }
     setLoading(true); setErro('');
     try {
-      const res = await fetch('/api/titulos', {
+      const res = await fetch('/api/operacoes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ taxaCliente, taxaFornecedor, clienteId, fornecedorId, observacoes, titulos }),
       });
       if (!res.ok) throw new Error((await res.json()).error ?? 'Erro ao salvar.');
       router.push('/sistema/titulos');
@@ -81,203 +132,286 @@ export default function NovoTituloPage() {
 
   const inputCls = 'w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 bg-gray-50 focus:bg-white transition-all';
   const labelCls = 'block text-xs font-semibold text-gray-600 mb-1';
+  const totalVolume = titulos.reduce((s, t) => s + (parseFloat(t.valor) || 0), 0);
 
   return (
-    <div className="max-w-5xl space-y-5">
+    <div className="max-w-4xl space-y-5">
       <Link href="/sistema/titulos" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
         <ArrowLeft className="w-4 h-4" /> Voltar
       </Link>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Dados do título */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-          <h2 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
-            <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-xs font-bold">1</span>
-            Dados do Título
-          </h2>
-          {form.tipo === 'CHEQUE' && (
-            <div className="mb-4">
-              <OcrCheque
-                onExtrair={(dados) => {
-                  if (dados.numero) set('numero', dados.numero);
-                  if (dados.valor) set('valor', dados.valor.replace(',', '.'));
-                  if (dados.data) {
-                    const partes = dados.data.split('/');
-                    if (partes.length === 3) {
-                      set('dataVencimento', `${partes[2]}-${partes[1].padStart(2,'0')}-${partes[0].padStart(2,'0')}`);
-                    }
-                  }
-                }}
-              />
+      {/* Stepper */}
+      <div className="flex items-center gap-3">
+        {[
+          { num: 1, label: 'Parâmetros da Operação', etapaKey: 'configurar' },
+          { num: 2, label: 'Títulos', etapaKey: 'titulos' },
+        ].map(({ num, label, etapaKey }, i) => (
+          <div key={num} className="flex items-center gap-2">
+            {i > 0 && <div className={`h-px w-8 ${etapa === 'titulos' ? 'bg-blue-400' : 'bg-gray-200'}`} />}
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+              etapa === etapaKey ? 'bg-blue-600 text-white' :
+              (etapaKey === 'configurar' && etapa === 'titulos') ? 'bg-green-100 text-green-700' :
+              'bg-gray-100 text-gray-500'
+            }`}>
+              {etapaKey === 'configurar' && etapa === 'titulos'
+                ? <CheckCircle2 className="w-4 h-4" />
+                : <span className="w-4 h-4 text-center text-xs font-bold">{num}</span>}
+              <span className="hidden sm:inline">{label}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── ETAPA 1: Parâmetros ── */}
+      {etapa === 'configurar' && (
+        <div className="space-y-5">
+          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+            <h2 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
+              <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-xs font-bold">1</span>
+              Taxas da Operação
+              <span className="text-xs text-gray-400 font-normal ml-1">— aplicadas a todos os títulos</span>
+            </h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelCls}>Taxa Cliente (% a.m.) *</label>
+                <input type="number" step="0.01" min="0.01" className={inputCls}
+                  value={taxaCliente} onChange={e => setTaxaCliente(e.target.value)}
+                  placeholder="3.50" />
+              </div>
+              <div>
+                <label className={labelCls}>Taxa Fornecedor (% a.m.) *</label>
+                <input type="number" step="0.01" min="0.01" className={inputCls}
+                  value={taxaFornecedor} onChange={e => setTaxaFornecedor(e.target.value)}
+                  placeholder="1.80" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+            <h2 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
+              <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-xs font-bold">2</span>
+              Custódia e Observações
+              <span className="text-xs text-gray-400 font-normal ml-1">— compartilhados entre todos os títulos</span>
+            </h2>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className={labelCls}>Cliente Custodiante</label>
+                <select className={inputCls} value={clienteId} onChange={e => setClienteId(e.target.value)}>
+                  <option value="">Selecione...</option>
+                  {clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>Fornecedor de Capital</label>
+                <select className={inputCls} value={fornecedorId} onChange={e => setFornecedorId(e.target.value)}>
+                  <option value="">Selecione...</option>
+                  {fornecedores.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className={labelCls}>Observações</label>
+              <textarea rows={3} className={`${inputCls} resize-none`} value={observacoes}
+                onChange={e => setObservacoes(e.target.value)} placeholder="Informações adicionais..." />
+            </div>
+          </div>
+
+          {erro && (
+            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-600 text-sm">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" /> {erro}
             </div>
           )}
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <label className={labelCls}>Tipo *</label>
-              <select className={inputCls} value={form.tipo} onChange={e => set('tipo', e.target.value)} required>
-                <option value="CHEQUE">Cheque</option>
-                <option value="BOLETO">Boleto</option>
-                <option value="PROMISSORIA">Promissória</option>
-              </select>
-            </div>
-            <div>
-              <label className={labelCls}>Número *</label>
-              <input className={inputCls} value={form.numero} onChange={e => set('numero', e.target.value)} required placeholder="Ex: 000123" />
-            </div>
-            <div>
-              <label className={labelCls}>Data de Emissão *</label>
-              <input type="date" className={inputCls} value={form.dataEmissao} onChange={e => set('dataEmissao', e.target.value)} required />
-            </div>
-            <div>
-              <label className={labelCls}>Data de Vencimento *</label>
-              <input type="date" className={inputCls} value={form.dataVencimento} onChange={e => set('dataVencimento', e.target.value)} required min={form.dataEmissao} />
-            </div>
-          </div>
-        </div>
-
-        {/* Emitente e sacado */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-          <h2 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
-            <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-xs font-bold">2</span>
-            Partes Envolvidas
-          </h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-3">
-              <p className="text-xs font-bold text-gray-500 uppercase">Emitente</p>
-              <div>
-                <label className={labelCls}>CPF/CNPJ *</label>
-                <input className={inputCls} value={form.emitenteCpfCnpj} onChange={e => set('emitenteCpfCnpj', e.target.value)} required placeholder="000.000.000-00" />
-              </div>
-              <div>
-                <label className={labelCls}>Nome / Razão Social *</label>
-                <input className={inputCls} value={form.emitenteNome} onChange={e => set('emitenteNome', e.target.value)} required placeholder="Nome completo" />
-              </div>
-            </div>
-            <div className="space-y-3">
-              <p className="text-xs font-bold text-gray-500 uppercase">Sacado</p>
-              <div>
-                <label className={labelCls}>CPF/CNPJ *</label>
-                <input className={inputCls} value={form.sacadoCpfCnpj} onChange={e => set('sacadoCpfCnpj', e.target.value)} required placeholder="000.000.000-00" />
-              </div>
-              <div>
-                <label className={labelCls}>Nome / Razão Social *</label>
-                <input className={inputCls} value={form.sacadoNome} onChange={e => set('sacadoNome', e.target.value)} required placeholder="Nome completo" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Valores e taxas */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-          <h2 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
-            <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-xs font-bold">3</span>
-            Valores e Taxas
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <label className={labelCls}>Valor (R$) *</label>
-              <input type="number" step="0.01" min="0.01" className={inputCls} value={form.valor} onChange={e => set('valor', e.target.value)} required placeholder="0,00" />
-            </div>
-            <div>
-              <label className={labelCls}>Taxa Cliente (% a.m.) *</label>
-              <input type="number" step="0.01" min="0.01" className={inputCls} value={form.taxaCliente} onChange={e => set('taxaCliente', e.target.value)} required placeholder="3.50" />
-            </div>
-            <div>
-              <label className={labelCls}>Taxa Fornecedor (% a.m.) *</label>
-              <input type="number" step="0.01" min="0.01" className={inputCls} value={form.taxaFornecedor} onChange={e => set('taxaFornecedor', e.target.value)} required placeholder="1.80" />
-            </div>
-            <div>
-              <label className={labelCls}>Prazo (dias)</label>
-              <input className={`${inputCls} bg-gray-100 cursor-not-allowed`} readOnly
-                value={form.dataEmissao && form.dataVencimento
-                  ? `${Math.max(0, differenceInDays(new Date(form.dataVencimento), new Date(form.dataEmissao)))} dias`
-                  : '—'} />
-            </div>
-          </div>
-        </div>
-
-        {/* Preview financeiro */}
-        {preview && fiscal && (
-          <div className="bg-gradient-to-br from-blue-950 to-slate-900 rounded-2xl p-6 text-white">
-            <div className="flex items-center gap-2 mb-5">
-              <Calculator className="w-5 h-5 text-amber-400" />
-              <h3 className="font-semibold">Preview do Cálculo</h3>
-              <span className="ml-auto text-xs bg-amber-400/20 text-amber-400 px-2 py-0.5 rounded-full">{preview.prazo} dias</span>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-              {[
-                { label: 'Encargo', value: formatarMoeda(preview.encargo), cor: 'text-amber-400' },
-                { label: 'Líquido Cliente', value: formatarMoeda(preview.valorLiquidoCliente), cor: 'text-green-400' },
-                { label: 'Custo Fornecedor', value: formatarMoeda(preview.custoCedente), cor: 'text-blue-300' },
-                { label: 'Spread Bruto', value: formatarMoeda(preview.spreadBruto), cor: 'text-purple-300' },
-              ].map(({ label, value, cor }) => (
-                <div key={label} className="bg-white/10 rounded-xl p-3 text-center">
-                  <p className={`text-lg font-bold ${cor}`}>{value}</p>
-                  <p className="text-xs text-white/60 mt-0.5">{label}</p>
-                </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-3 gap-3 pt-4 border-t border-white/10">
-              {[
-                { label: 'Espelho Fiscal', value: formatarMoeda(fiscal.baseEspelho) },
-                { label: 'Imposto Provisionado', value: formatarMoeda(fiscal.impostoProvisao), cor: 'text-red-300' },
-                { label: 'Spread Líquido', value: formatarMoeda(fiscal.spreadLiquido), cor: 'text-emerald-400' },
-              ].map(({ label, value, cor }) => (
-                <div key={label} className="text-center">
-                  <p className={`text-base font-bold ${cor ?? 'text-white'}`}>{value}</p>
-                  <p className="text-xs text-white/50">{label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Custódia */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-          <h2 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
-            <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-xs font-bold">4</span>
-            Custódia e Observações
-          </h2>
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className={labelCls}>Cliente Custodiante</label>
-              <select className={inputCls} value={form.clienteId} onChange={e => set('clienteId', e.target.value)}>
-                <option value="">Selecione...</option>
-                {clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className={labelCls}>Fornecedor de Capital</label>
-              <select className={inputCls} value={form.fornecedorId} onChange={e => set('fornecedorId', e.target.value)}>
-                <option value="">Selecione...</option>
-                {fornecedores.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className={labelCls}>Observações</label>
-            <textarea rows={3} className={`${inputCls} resize-none`} value={form.observacoes} onChange={e => set('observacoes', e.target.value)} placeholder="Informações adicionais..." />
-          </div>
-        </div>
-
-        {erro && (
-          <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-600 text-sm">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" /> {erro}
-          </div>
-        )}
-
-        <div className="flex gap-3">
-          <button type="submit" disabled={loading}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-xl transition-colors disabled:opacity-60 shadow-sm">
-            <Save className="w-4 h-4" />
-            {loading ? 'Salvando...' : 'Salvar Título'}
+          <button onClick={confirmarEtapa1}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-xl transition-colors shadow-sm">
+            Continuar — Adicionar Títulos
+            <Plus className="w-4 h-4" />
           </button>
-          <Link href="/sistema/titulos" className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-5 py-3 rounded-xl transition-colors text-sm">
-            Cancelar
-          </Link>
         </div>
-      </form>
+      )}
+
+      {/* ── ETAPA 2: Títulos ── */}
+      {etapa === 'titulos' && (
+        <div className="space-y-4">
+          {/* Banner de parâmetros fixos */}
+          <div className="bg-blue-950 rounded-2xl px-5 py-4 text-white flex flex-wrap items-center gap-4">
+            <Lock className="w-4 h-4 text-blue-300 flex-shrink-0" />
+            <div className="flex flex-wrap gap-4 flex-1 text-sm">
+              <span>Taxa Cliente: <strong className="text-amber-400">{taxaCliente}% a.m.</strong></span>
+              <span>Taxa Fornecedor: <strong className="text-amber-400">{taxaFornecedor}% a.m.</strong></span>
+              {clientes.find(c => c.id === clienteId) && (
+                <span>Cliente: <strong>{clientes.find(c => c.id === clienteId)?.nome}</strong></span>
+              )}
+              {fornecedores.find(f => f.id === fornecedorId) && (
+                <span>Fornecedor: <strong>{fornecedores.find(f => f.id === fornecedorId)?.nome}</strong></span>
+              )}
+            </div>
+            <button onClick={() => setEtapa('configurar')}
+              className="text-xs text-blue-300 hover:text-white underline">
+              Editar
+            </button>
+          </div>
+
+          {/* Cards de títulos */}
+          {titulos.map((t, idx) => {
+            const preview = calcPreview(t, taxaCliente, taxaFornecedor);
+            const aberto = expandido === t.id;
+            const prazo = t.dataEmissao && t.dataVencimento
+              ? differenceInDays(new Date(t.dataVencimento + 'T00:00:00'), new Date(t.dataEmissao + 'T00:00:00'))
+              : null;
+            const completo = !!(t.numero && t.emitenteCpfCnpj && t.emitenteNome && t.sacadoCpfCnpj && t.sacadoNome && t.dataEmissao && t.dataVencimento && t.valor);
+
+            return (
+              <div key={t.id} className={`bg-white rounded-2xl border shadow-sm transition-all ${aberto ? 'border-blue-300' : 'border-gray-100'}`}>
+                {/* Header do card */}
+                <button className="w-full flex items-center gap-3 px-5 py-4 text-left"
+                  onClick={() => setExpandido(aberto ? '' : t.id)}>
+                  <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                    completo ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-600'}`}>
+                    {completo ? <CheckCircle2 className="w-4 h-4" /> : idx + 1}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-800 text-sm">
+                      Título {idx + 1} {t.numero ? `— ${t.tipo} ${t.numero}` : ''}
+                    </p>
+                    {t.valor && <p className="text-xs text-gray-500">{formatarMoeda(parseFloat(t.valor))}{prazo ? ` · ${prazo} dias` : ''}</p>}
+                  </div>
+                  {titulos.length > 1 && (
+                    <button onClick={e => { e.stopPropagation(); removerTitulo(t.id); }}
+                      className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                  {aberto ? <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />}
+                </button>
+
+                {/* Conteúdo expandido */}
+                {aberto && (
+                  <div className="px-5 pb-5 space-y-5 border-t border-gray-50 pt-4">
+                    {/* OCR */}
+                    {t.tipo === 'CHEQUE' && (
+                      <OcrCheque onExtrair={(dados) => {
+                        if (dados.numero) setTitulo(t.id, 'numero', dados.numero);
+                        if (dados.valor) setTitulo(t.id, 'valor', dados.valor.replace(',', '.'));
+                        if (dados.data) {
+                          const p = dados.data.split('/');
+                          if (p.length === 3) setTitulo(t.id, 'dataVencimento', `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`);
+                        }
+                      }} />
+                    )}
+
+                    {/* Dados do título */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div>
+                        <label className={labelCls}>Tipo *</label>
+                        <select className={inputCls} value={t.tipo} onChange={e => setTitulo(t.id, 'tipo', e.target.value)}>
+                          <option value="CHEQUE">Cheque</option>
+                          <option value="BOLETO">Boleto</option>
+                          <option value="PROMISSORIA">Promissória</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelCls}>Número *</label>
+                        <input className={inputCls} value={t.numero} onChange={e => setTitulo(t.id, 'numero', e.target.value)} placeholder="000123" />
+                      </div>
+                      <div>
+                        <label className={labelCls}>Emissão *</label>
+                        <input type="date" className={inputCls} value={t.dataEmissao}
+                          onChange={e => { if (e.target.value) setTitulo(t.id, 'dataEmissao', e.target.value); }}
+                          onInput={e => { const v = (e.target as HTMLInputElement).value; if (v) setTitulo(t.id, 'dataEmissao', v); }} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>Vencimento *</label>
+                        <input type="date" className={inputCls} value={t.dataVencimento}
+                          onChange={e => { if (e.target.value) setTitulo(t.id, 'dataVencimento', e.target.value); }}
+                          onInput={e => { const v = (e.target as HTMLInputElement).value; if (v) setTitulo(t.id, 'dataVencimento', v); }} />
+                      </div>
+                    </div>
+
+                    {/* Partes */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-3">
+                        <p className="text-xs font-bold text-gray-500 uppercase">Emitente</p>
+                        <div>
+                          <label className={labelCls}>CPF/CNPJ *</label>
+                          <input className={inputCls} value={t.emitenteCpfCnpj} onChange={e => setTitulo(t.id, 'emitenteCpfCnpj', e.target.value)} placeholder="000.000.000-00" />
+                        </div>
+                        <div>
+                          <label className={labelCls}>Nome / Razão Social *</label>
+                          <input className={inputCls} value={t.emitenteNome} onChange={e => setTitulo(t.id, 'emitenteNome', e.target.value)} placeholder="Nome completo" />
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <p className="text-xs font-bold text-gray-500 uppercase">Sacado</p>
+                        <div>
+                          <label className={labelCls}>CPF/CNPJ *</label>
+                          <input className={inputCls} value={t.sacadoCpfCnpj} onChange={e => setTitulo(t.id, 'sacadoCpfCnpj', e.target.value)} placeholder="000.000.000-00" />
+                        </div>
+                        <div>
+                          <label className={labelCls}>Nome / Razão Social *</label>
+                          <input className={inputCls} value={t.sacadoNome} onChange={e => setTitulo(t.id, 'sacadoNome', e.target.value)} placeholder="Nome completo" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Valor */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div>
+                        <label className={labelCls}>Valor (R$) *</label>
+                        <input type="number" step="0.01" min="0.01" className={inputCls}
+                          value={t.valor} onChange={e => setTitulo(t.id, 'valor', e.target.value)} placeholder="0,00" />
+                      </div>
+                      <div>
+                        <label className={labelCls}>Prazo</label>
+                        <div className={`${inputCls} bg-gray-100 text-gray-500 cursor-default`}>
+                          {prazo !== null && prazo > 0 ? `${prazo} dias` : '—'}
+                        </div>
+                      </div>
+                      {preview && (
+                        <>
+                          <div>
+                            <label className={labelCls}>Encargo</label>
+                            <div className={`${inputCls} bg-amber-50 text-amber-700 font-semibold cursor-default`}>{formatarMoeda(preview.encargo)}</div>
+                          </div>
+                          <div>
+                            <label className={labelCls}>Líquido Cliente</label>
+                            <div className={`${inputCls} bg-green-50 text-green-700 font-semibold cursor-default`}>{formatarMoeda(preview.valorLiquidoCliente)}</div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Resumo + botões */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-wrap items-center gap-4">
+            <div className="flex-1">
+              <p className="text-xs text-gray-500">
+                {titulos.length} título{titulos.length !== 1 ? 's' : ''} · Volume total:
+                <strong className="text-blue-600 ml-1">{formatarMoeda(totalVolume)}</strong>
+              </p>
+            </div>
+            <button onClick={adicionarTitulo}
+              className="flex items-center gap-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-xl transition-colors">
+              <Plus className="w-4 h-4" /> Adicionar Título
+            </button>
+            <button onClick={handleFinalizar} disabled={loading}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors disabled:opacity-60 shadow-sm text-sm">
+              <Save className="w-4 h-4" />
+              {loading ? 'Salvando...' : `Finalizar Operação (${titulos.length} título${titulos.length !== 1 ? 's' : ''})`}
+            </button>
+          </div>
+
+          {erro && (
+            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-600 text-sm">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" /> {erro}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
