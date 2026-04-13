@@ -214,25 +214,41 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Tenta enviar e-mail se SMTP estiver configurado (opcional)
-    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    // Envia e-mail via Resend se a chave estiver configurada
+    if (process.env.RESEND_API_KEY) {
       try {
-        const transporter = criarTransporter();
-        await transporter.sendMail({
-          from: `"Site Efficaz Factoring" <${process.env.SMTP_USER}>`,
-          to: EMAIL_DESTINO,
-          replyTo: email,
-          subject: `Nova solicitação de análise – ${company}`,
-          html: htmlEmail({ name, company, email, phone, companyType, service, message }),
+        const headers = {
+          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json',
+        };
+        const from = 'Efficaz Factoring <onboarding@resend.dev>';
+
+        // Notificação para a equipe
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            from,
+            to: [EMAIL_DESTINO],
+            reply_to: email,
+            subject: `Nova solicitação de análise – ${company}`,
+            html: htmlEmail({ name, company, email, phone, companyType, service, message }),
+          }),
         });
-        await transporter.sendMail({
-          from: `"Efficaz Factoring" <${process.env.SMTP_USER}>`,
-          to: email,
-          subject: 'Recebemos sua solicitação – Efficaz Factoring',
-          html: htmlConfirmacao(name),
+
+        // Confirmação para o solicitante
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            from,
+            to: [email],
+            subject: 'Recebemos sua solicitação – Efficaz Factoring',
+            html: htmlConfirmacao(name),
+          }),
         });
       } catch (emailErr) {
-        console.error('[API /contato] Erro ao enviar e-mail (não crítico):', emailErr);
+        console.error('[API /contato] Erro ao enviar e-mail via Resend:', emailErr);
       }
     }
 
