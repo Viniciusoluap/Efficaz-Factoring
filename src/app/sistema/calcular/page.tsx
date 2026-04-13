@@ -1,37 +1,68 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { calcularOperacao, calcularFiscal, formatarMoeda, formatarPorcentagem } from '@/lib/calculos';
-import { differenceInDays, format, addDays } from 'date-fns';
+import { differenceInDays, format, addDays, isValid, parseISO } from 'date-fns';
 import { Calculator, TrendingUp, ArrowRight, Info, Copy, CheckCheck } from 'lucide-react';
+
+function parseData(str: string) {
+  if (!str) return null;
+  const d = new Date(str + 'T00:00:00');
+  return isValid(d) ? d : null;
+}
 
 export default function CalcularPage() {
   const [valor, setValor] = useState('');
   const [taxaCliente, setTaxaCliente] = useState('');
   const [taxaFornecedor, setTaxaFornecedor] = useState('');
-  // hoje calculado no cliente para evitar hydration mismatch
   const [dataEmissao, setDataEmissao] = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const [prazo, setPrazo] = useState('30');
+  const [dataVencimento, setDataVencimento] = useState(() => {
+    return format(addDays(new Date(), 30), 'yyyy-MM-dd');
+  });
   const [resultado, setResultado] = useState<ReturnType<typeof calcularOperacao> | null>(null);
   const [fiscal, setFiscal] = useState<ReturnType<typeof calcularFiscal> | null>(null);
   const [erro, setErro] = useState('');
   const [copiado, setCopiado] = useState(false);
 
-  // Vencimento calculado automaticamente
-  const dataVencimento = (() => {
+  // Quando muda a data de emissão: mantém o prazo e recalcula o vencimento
+  const handleEmissaoChange = (val: string) => {
+    if (!val) return;
+    setDataEmissao(val);
+    const emissao = parseData(val);
     const dias = parseInt(prazo);
-    if (!isNaN(dias) && dias > 0 && dataEmissao) {
-      try { return format(addDays(new Date(dataEmissao + 'T00:00:00'), dias), 'yyyy-MM-dd'); }
-      catch { return ''; }
+    if (emissao && !isNaN(dias) && dias > 0) {
+      setDataVencimento(format(addDays(emissao, dias), 'yyyy-MM-dd'));
     }
-    return '';
-  })();
+  };
+
+  // Quando muda o prazo: recalcula o vencimento
+  const handlePrazoChange = (val: string) => {
+    setPrazo(val);
+    const dias = parseInt(val);
+    const emissao = parseData(dataEmissao);
+    if (emissao && !isNaN(dias) && dias > 0) {
+      setDataVencimento(format(addDays(emissao, dias), 'yyyy-MM-dd'));
+    }
+  };
+
+  // Quando muda o vencimento: recalcula o prazo
+  const handleVencimentoChange = (val: string) => {
+    if (!val) return;
+    setDataVencimento(val);
+    const emissao = parseData(dataEmissao);
+    const venc = parseData(val);
+    if (emissao && venc) {
+      const dias = differenceInDays(venc, emissao);
+      if (dias > 0) setPrazo(String(dias));
+    }
+  };
 
   const calcular = () => {
     setErro('');
     try {
       const dias = parseInt(prazo);
-      if (!valor || !taxaCliente || !taxaFornecedor || !dataEmissao || isNaN(dias) || dias < 1) {
+      if (!valor || !taxaCliente || !taxaFornecedor || !dataEmissao || !dataVencimento || isNaN(dias) || dias < 1) {
         setErro('Preencha todos os campos obrigatórios.');
         return;
       }
@@ -88,21 +119,19 @@ export default function CalcularPage() {
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1">Data de Emissão *</label>
             <input type="date" className={inputCls} value={dataEmissao}
-              onChange={e => { if (e.target.value) setDataEmissao(e.target.value); }}
-              onInput={e => { const v = (e.target as HTMLInputElement).value; if (v) setDataEmissao(v); }} />
+              onChange={e => { if (e.target.value) handleEmissaoChange(e.target.value); }}
+              onInput={e => { const v = (e.target as HTMLInputElement).value; if (v) handleEmissaoChange(v); }} />
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1">Prazo (dias) *</label>
             <input type="number" inputMode="numeric" min="1" max="9999" className={inputCls}
-              value={prazo} onChange={e => setPrazo(e.target.value)} placeholder="30" />
+              value={prazo} onChange={e => handlePrazoChange(e.target.value)} placeholder="30" />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Vencimento (calculado)</label>
-            <div className={`${inputCls} bg-gray-100 cursor-default text-gray-500`}>
-              {dataVencimento
-                ? format(new Date(dataVencimento + 'T00:00:00'), 'dd/MM/yyyy')
-                : '—'}
-            </div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Vencimento *</label>
+            <input type="date" className={inputCls} value={dataVencimento}
+              onChange={e => { if (e.target.value) handleVencimentoChange(e.target.value); }}
+              onInput={e => { const v = (e.target as HTMLInputElement).value; if (v) handleVencimentoChange(v); }} />
           </div>
         </div>
 
