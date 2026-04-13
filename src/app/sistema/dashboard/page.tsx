@@ -80,6 +80,15 @@ const statusCor: Record<string, string> = {
   PROTESTADO: 'bg-purple-100 text-purple-700', CANCELADO: 'bg-gray-100 text-gray-600',
 };
 
+function valorFontClass(value: string) {
+  const len = value.replace(/\s/g, '').length;
+  if (len <= 4)  return 'text-2xl';
+  if (len <= 7)  return 'text-xl';
+  if (len <= 10) return 'text-lg';
+  if (len <= 13) return 'text-base';
+  return 'text-sm';
+}
+
 export default async function DashboardPage() {
   const d = await getDashboardData();
 
@@ -97,13 +106,13 @@ export default async function DashboardPage() {
       {/* Cards de indicadores */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {cards.map(({ label, value, icon: Icon, cor, bg, desc }) => (
-          <div key={label} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+          <div key={label} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow min-w-0 overflow-hidden">
             <div className={`w-10 h-10 ${bg} rounded-xl flex items-center justify-center mb-3`}>
               <Icon className={`w-5 h-5 ${cor}`} />
             </div>
-            <p className="text-2xl font-bold text-gray-800">{value}</p>
-            <p className="text-xs font-medium text-gray-500 mt-0.5">{label}</p>
-            <p className="text-xs text-gray-400 mt-1">{desc}</p>
+            <p className={`${valorFontClass(value)} font-bold text-gray-800 truncate`}>{value}</p>
+            <p className="text-xs font-medium text-gray-500 mt-0.5 truncate">{label}</p>
+            <p className="text-xs text-gray-400 mt-1 truncate">{desc}</p>
           </div>
         ))}
       </div>
