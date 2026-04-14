@@ -10,7 +10,7 @@ import {
   ChevronLeft, ChevronRight, Shield, X, Inbox,
 } from 'lucide-react';
 
-const navItems = [
+const navAdmin = [
   { href: '/sistema/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/sistema/titulos', label: 'Custódias', icon: FileText },
   { href: '/sistema/calcular', label: 'Calculadora', icon: Calculator },
@@ -19,6 +19,13 @@ const navItems = [
   { href: '/sistema/solicitacoes', label: 'Solicitações', icon: Inbox },
   { href: '/sistema/relatorios', label: 'Relatórios', icon: TrendingUp },
   { href: '/sistema/configuracoes', label: 'Configurações', icon: Settings },
+];
+
+const navCliente = [
+  { href: '/sistema/portal', label: 'Meu Relatório', icon: TrendingUp },
+  { href: '/sistema/portal/titulos', label: 'Meus Títulos', icon: FileText },
+  { href: '/sistema/portal/solicitacoes', label: 'Solicitações', icon: Inbox },
+  { href: '/sistema/portal/configuracoes', label: 'Configurações', icon: Settings },
 ];
 
 const perfilLabel: Record<string, string> = {
@@ -42,6 +49,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const { data: session } = useSession();
   const [collapsed, setCollapsed] = useState(false);
   const perfil = (session?.user as any)?.perfil ?? 'OPERADOR';
+  const navItems = perfil === 'CLIENTE' ? navCliente : navAdmin;
 
   const navContent = (
     <>
@@ -68,7 +76,9 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
       {/* Nav */}
       <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
         {navItems.map(({ href, label, icon: Icon }) => {
-          const active = pathname.startsWith(href);
+          const active = href === '/sistema/portal'
+            ? pathname === '/sistema/portal'
+            : pathname.startsWith(href);
           return (
             <Link
               key={href}

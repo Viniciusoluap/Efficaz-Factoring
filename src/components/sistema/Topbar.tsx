@@ -18,6 +18,11 @@ const titulos: Record<string, string> = {
   '/sistema/fornecedores/novo': 'Novo Fornecedor',
   '/sistema/relatorios': 'Relatórios',
   '/sistema/configuracoes': 'Configurações',
+  // Portal do cliente
+  '/sistema/portal': 'Meu Relatório',
+  '/sistema/portal/titulos': 'Meus Títulos',
+  '/sistema/portal/solicitacoes': 'Solicitações',
+  '/sistema/portal/configuracoes': 'Meu Perfil',
 };
 
 interface TopbarProps {

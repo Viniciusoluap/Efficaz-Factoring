@@ -56,6 +56,7 @@ model Usuario {
   senha     String
   perfil    Perfil   @default(OPERADOR)
   ativo     Boolean  @default(true)
+  fotoUrl   String?
   criadoEm  DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
@@ -78,10 +79,26 @@ model Cliente {
   criadoEm  DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  titulos    Titulo[]
-  operacoes  Operacao[]
+  titulos       Titulo[]
+  operacoes     Operacao[]
+  solicitacoes  SolicitacaoCliente[]
 
   @@map("clientes")
+}
+
+model SolicitacaoCliente {
+  id              String   @id @default(cuid())
+  clienteId       String
+  cliente         Cliente  @relation(fields: [clienteId], references: [id])
+  tipo            String   // CHEQUE, BOLETO, DUPLICATA, NOTA, OUTRO
+  descricao       String   @db.Text
+  valorEstimado   Decimal? @db.Decimal(15, 2)
+  status          String   @default("AGUARDANDO")
+  observacaoAdmin String?  @db.Text
+  criadoEm       DateTime @default(now())
+  atualizadoEm   DateTime @updatedAt
+
+  @@map("solicitacoes_cliente")
 }
 
 model Fornecedor {
