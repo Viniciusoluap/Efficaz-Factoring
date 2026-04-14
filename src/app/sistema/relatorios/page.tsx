@@ -339,32 +339,32 @@ export default function RelatoriosPage() {
 
           {/* Resumo geral */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {espelho ? (() => {
+            {(() => {
               const tp = dados.totaisPeriodo;
               const spreadBruto = Number(tp._sum?.spreadBruto ?? 0);
-              const baseEspelho = Number(tp._sum?.baseEspelho ?? 0);
-              const lucroTributavel = spreadBruto - baseEspelho;
-              return [
+              const baseEsp = Number(tp._sum?.baseEspelho ?? 0);
+              const cards = espelho ? [
                 { label: 'Total de Títulos', value: String(tp._count?.id ?? 0), cor: 'text-gray-800' },
                 { label: 'Volume Total', value: formatarMoeda(Number(tp._sum?.valor ?? 0)), cor: 'text-blue-600' },
-                { label: 'Base Espelho (0,5%)', value: formatarMoeda(baseEspelho), cor: 'text-purple-600' },
-                { label: 'Lucro Tributável', value: formatarMoeda(lucroTributavel), cor: 'text-orange-600' },
+                { label: 'Base Espelho (0,5%)', value: formatarMoeda(baseEsp), cor: 'text-purple-600' },
+                { label: 'Lucro Tributável', value: formatarMoeda(spreadBruto - baseEsp), cor: 'text-orange-600' },
                 { label: 'Imposto Prov. (~7%)', value: formatarMoeda(Number(tp._sum?.impostoProvisao ?? 0)), cor: 'text-red-600' },
                 { label: 'Spread Líquido', value: formatarMoeda(Number(tp._sum?.spreadLiquido ?? 0)), cor: 'text-green-700' },
+              ] : [
+                { label: 'Total de Títulos', value: String(tp._count?.id ?? 0), cor: 'text-gray-800' },
+                { label: 'Volume Total', value: formatarMoeda(Number(tp._sum?.valor ?? 0)), cor: 'text-blue-600' },
+                { label: 'Total Antecipado', value: formatarMoeda(Number(tp._sum?.valorLiquidoCliente ?? 0)), cor: 'text-green-600' },
+                { label: 'Encargos Totais', value: formatarMoeda(Number(tp._sum?.encargo ?? 0)), cor: 'text-amber-600' },
+                { label: 'Spread Bruto Total', value: formatarMoeda(spreadBruto), cor: 'text-purple-600' },
+                { label: 'Spread Líquido Total', value: formatarMoeda(Number(tp._sum?.spreadLiquido ?? 0)), cor: 'text-green-700' },
               ];
-            })() : [
-              { label: 'Total de Títulos', value: String(dados.totaisPeriodo._count?.id ?? 0), cor: 'text-gray-800' },
-              { label: 'Volume Total', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.valor ?? 0)), cor: 'text-blue-600' },
-              { label: 'Total Antecipado', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.valorLiquidoCliente ?? 0)), cor: 'text-green-600' },
-              { label: 'Encargos Totais', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.encargo ?? 0)), cor: 'text-amber-600' },
-              { label: 'Spread Bruto Total', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.spreadBruto ?? 0)), cor: 'text-purple-600' },
-              { label: 'Spread Líquido Total', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.spreadLiquido ?? 0)), cor: 'text-green-700' },
-            ]}.map(({ label, value, cor }) => (
-              <div key={label} className={`rounded-2xl p-4 border shadow-sm ${espelho ? 'bg-purple-50 border-purple-100' : 'bg-white border-gray-100'}`}>
-                <p className={`text-xl font-bold ${cor}`}>{value}</p>
-                <p className="text-xs text-gray-500 mt-1">{label}</p>
-              </div>
-            ))}
+              return cards.map(({ label, value, cor }) => (
+                <div key={label} className={`rounded-2xl p-4 border shadow-sm ${espelho ? 'bg-purple-50 border-purple-100' : 'bg-white border-gray-100'}`}>
+                  <p className={`text-xl font-bold ${cor}`}>{value}</p>
+                  <p className="text-xs text-gray-500 mt-1">{label}</p>
+                </div>
+              ));
+            })()}
           </div>
 
           <div className="grid lg:grid-cols-2 gap-5">
