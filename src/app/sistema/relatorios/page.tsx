@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { formatarMoeda } from '@/lib/calculos';
-import { BarChart3, FileDown, Filter, RefreshCw, Pencil, Trash2, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { BarChart3, FileDown, Filter, RefreshCw, Pencil, Trash2, Loader2, AlertTriangle, CheckCircle2, Scale } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -35,6 +35,7 @@ export default function RelatoriosPage() {
   const [confirmDelId, setConfirmDelId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [baixandoId, setBaixandoId] = useState<string | null>(null);
+  const [espelho, setEspelho] = useState(false);
 
   const carregar = useCallback(() => {
     setLoading(true);
@@ -106,7 +107,7 @@ export default function RelatoriosPage() {
       doc.text('EFFICAZ FACTORING', 14, 13);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
-      doc.text(`Relatório Financeiro — ${periodoLabel}`, 14, 22);
+      doc.text(`${espelho ? 'Relatório Espelho Fiscal' : 'Relatório Financeiro'} — ${periodoLabel}`, 14, 22);
       doc.text(`Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}`, 140, 22);
 
       // Filtros
@@ -118,23 +119,32 @@ export default function RelatoriosPage() {
       doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(30, 30, 30);
-      doc.text(`Resumo — ${periodoLabel}`, 14, 46);
+      doc.text(`Resumo — ${periodoLabel}${espelho ? ' (Espelho Fiscal)' : ''}`, 14, 46);
 
       const tp = dados.totaisPeriodo;
+      const spreadBrutoPDF = Number(tp._sum?.spreadBruto ?? 0);
+      const baseEspelhoPDF = Number(tp._sum?.baseEspelho ?? 0);
       autoTable(doc, {
         startY: 50,
         head: [['Indicador', 'Valor']],
-        body: [
+        body: espelho ? [
+          ['Títulos no período', String(tp._count?.id ?? 0)],
+          ['Volume', formatarMoeda(Number(tp._sum?.valor ?? 0))],
+          ['Base Espelho (0,5% a.m.)', formatarMoeda(baseEspelhoPDF)],
+          ['Lucro Tributável', formatarMoeda(spreadBrutoPDF - baseEspelhoPDF)],
+          ['Imposto Provisório (~7%)', formatarMoeda(Number(tp._sum?.impostoProvisao ?? 0))],
+          ['Spread Líquido', formatarMoeda(Number(tp._sum?.spreadLiquido ?? 0))],
+        ] : [
           ['Títulos no período', String(tp._count?.id ?? 0)],
           ['Volume', formatarMoeda(Number(tp._sum?.valor ?? 0))],
           ['Encargos', formatarMoeda(Number(tp._sum?.encargo ?? 0))],
-          ['Spread Bruto', formatarMoeda(Number(tp._sum?.spreadBruto ?? 0))],
+          ['Spread Bruto', formatarMoeda(spreadBrutoPDF)],
           ['Imposto Provisório', formatarMoeda(Number(tp._sum?.impostoProvisao ?? 0))],
           ['Spread Líquido', formatarMoeda(Number(tp._sum?.spreadLiquido ?? 0))],
         ],
         styles: { fontSize: 9 },
-        headStyles: { fillColor: [29, 78, 216] },
-        alternateRowStyles: { fillColor: [245, 247, 255] },
+        headStyles: { fillColor: espelho ? [88, 28, 135] : [29, 78, 216] },
+        alternateRowStyles: { fillColor: espelho ? [250, 245, 255] : [245, 247, 255] },
         columnStyles: { 1: { halign: 'right' } },
         margin: { left: 14, right: 14 },
       });
@@ -146,13 +156,22 @@ export default function RelatoriosPage() {
       doc.text('Totais Gerais (acumulado)', 14, yGeral);
 
       const tg = dados.totaisGeral;
+      const spreadBrutoGeralPDF = Number(tg._sum?.spreadBruto ?? 0);
+      const baseEspelhoGeralPDF = Number(tg._sum?.baseEspelho ?? 0);
       autoTable(doc, {
         startY: yGeral + 4,
         head: [['Indicador', 'Valor']],
-        body: [
+        body: espelho ? [
           ['Total de Títulos', String(tg._count?.id ?? 0)],
           ['Volume Total', formatarMoeda(Number(tg._sum?.valor ?? 0))],
-          ['Spread Bruto Total', formatarMoeda(Number(tg._sum?.spreadBruto ?? 0))],
+          ['Base Espelho Total', formatarMoeda(baseEspelhoGeralPDF)],
+          ['Lucro Tributável Total', formatarMoeda(spreadBrutoGeralPDF - baseEspelhoGeralPDF)],
+          ['Imposto Provisório Total', formatarMoeda(Number(tg._sum?.impostoProvisao ?? 0))],
+          ['Spread Líquido Total', formatarMoeda(Number(tg._sum?.spreadLiquido ?? 0))],
+        ] : [
+          ['Total de Títulos', String(tg._count?.id ?? 0)],
+          ['Volume Total', formatarMoeda(Number(tg._sum?.valor ?? 0))],
+          ['Spread Bruto Total', formatarMoeda(spreadBrutoGeralPDF)],
           ['Spread Líquido Total', formatarMoeda(Number(tg._sum?.spreadLiquido ?? 0))],
         ],
         styles: { fontSize: 9 },
@@ -172,19 +191,19 @@ export default function RelatoriosPage() {
 
         autoTable(doc, {
           startY: yTitulos + 4,
-          head: [['Nº / Emitente', 'Tipo', 'Vencimento', 'Valor', 'Encargo', 'Spread Líq.', 'Status']],
+          head: [['Nº', 'Tipo', 'Vencimento', 'Valor', espelho ? 'Base Espelho' : 'Encargo', 'Spread Líq.', 'Status']],
           body: dados.titulos.map(t => [
             t.numero,
             t.tipo,
             format(new Date(t.dataVencimento), 'dd/MM/yyyy'),
             formatarMoeda(Number(t.valor)),
-            formatarMoeda(Number(t.encargo)),
+            espelho ? formatarMoeda(Number(t.baseEspelho ?? 0)) : formatarMoeda(Number(t.encargo)),
             formatarMoeda(Number(t.spreadLiquido ?? 0)),
-            t.status,
+            t.status === 'LIQUIDADO' ? 'Pago' : t.status === 'VENCIDO' ? 'Vencido' : 'Pendente',
           ]),
           styles: { fontSize: 7.5, cellPadding: 2 },
-          headStyles: { fillColor: [15, 118, 110] },
-          alternateRowStyles: { fillColor: [240, 253, 250] },
+          headStyles: { fillColor: espelho ? [88, 28, 135] : [15, 118, 110] },
+          alternateRowStyles: { fillColor: espelho ? [250, 245, 255] : [240, 253, 250] },
           columnStyles: {
             3: { halign: 'right' },
             4: { halign: 'right' },
@@ -204,7 +223,8 @@ export default function RelatoriosPage() {
         doc.text(`Página ${i} de ${pageCount}`, 190, 290, { align: 'right' });
       }
 
-      doc.save(`relatorio-efficaz-${ano}-${String(mes).padStart(2, '0')}.pdf`);
+      const sufixo = espelho ? 'espelho-fiscal' : 'financeiro';
+      doc.save(`relatorio-efficaz-${sufixo}-${ano}-${String(mes).padStart(2, '0')}.pdf`);
     } finally {
       setGerando(false);
     }
@@ -260,15 +280,43 @@ export default function RelatoriosPage() {
           </div>
         </div>
 
+        {/* Espelho Fiscal Toggle — visualmente separado */}
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <button
+            type="button"
+            onClick={() => setEspelho(v => !v)}
+            className={`inline-flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all font-medium text-sm ${
+              espelho
+                ? 'border-purple-400 bg-purple-50 text-purple-800'
+                : 'border-dashed border-gray-300 bg-white text-gray-500 hover:border-purple-300 hover:text-purple-600'
+            }`}
+          >
+            <div className={`w-5 h-5 rounded flex items-center justify-center border-2 flex-shrink-0 transition-all ${
+              espelho ? 'bg-purple-600 border-purple-600' : 'border-gray-400'
+            }`}>
+              {espelho && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+            </div>
+            <Scale className={`w-4 h-4 flex-shrink-0 ${espelho ? 'text-purple-600' : 'text-gray-400'}`} />
+            <span>
+              <span className="font-semibold">Modo Espelho Fiscal</span>
+              <span className={`ml-2 text-xs ${espelho ? 'text-purple-600' : 'text-gray-400'}`}>
+                {espelho ? 'ATIVO — exibindo dados para declaração (Lucro Presumido)' : 'Exibir dados fiscais para declaração de IR'}
+              </span>
+            </span>
+          </button>
+        </div>
+
         <div className="flex gap-3 mt-4">
           <button onClick={carregar}
             className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600 bg-gray-50 border border-gray-200 px-4 py-2 rounded-xl transition-colors">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Atualizar
           </button>
           <button onClick={gerarPDF} disabled={gerando || loading || !dados}
-            className="flex items-center gap-2 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl transition-colors disabled:opacity-60 shadow-sm">
+            className={`flex items-center gap-2 text-sm font-semibold text-white px-4 py-2 rounded-xl transition-colors disabled:opacity-60 shadow-sm ${
+              espelho ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'
+            }`}>
             <FileDown className="w-4 h-4" />
-            {gerando ? 'Gerando PDF...' : 'Baixar PDF'}
+            {gerando ? 'Gerando PDF...' : espelho ? 'Baixar PDF Espelho' : 'Baixar PDF'}
           </button>
         </div>
       </div>
@@ -279,17 +327,40 @@ export default function RelatoriosPage() {
         </div>
       ) : dados ? (
         <>
+          {/* Banner espelho ativo */}
+          {espelho && (
+            <div className="flex items-center gap-3 bg-purple-50 border border-purple-200 rounded-2xl px-5 py-3">
+              <Scale className="w-4 h-4 text-purple-600 flex-shrink-0" />
+              <p className="text-sm text-purple-800">
+                <strong>Modo Espelho Fiscal ativo</strong> — valores calculados com taxa mínima de 0,5% a.m. (Lucro Presumido). Use estes dados para declaração ao contador.
+              </p>
+            </div>
+          )}
+
           {/* Resumo geral */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {[
+            {espelho ? (() => {
+              const tp = dados.totaisPeriodo;
+              const spreadBruto = Number(tp._sum?.spreadBruto ?? 0);
+              const baseEspelho = Number(tp._sum?.baseEspelho ?? 0);
+              const lucroTributavel = spreadBruto - baseEspelho;
+              return [
+                { label: 'Total de Títulos', value: String(tp._count?.id ?? 0), cor: 'text-gray-800' },
+                { label: 'Volume Total', value: formatarMoeda(Number(tp._sum?.valor ?? 0)), cor: 'text-blue-600' },
+                { label: 'Base Espelho (0,5%)', value: formatarMoeda(baseEspelho), cor: 'text-purple-600' },
+                { label: 'Lucro Tributável', value: formatarMoeda(lucroTributavel), cor: 'text-orange-600' },
+                { label: 'Imposto Prov. (~7%)', value: formatarMoeda(Number(tp._sum?.impostoProvisao ?? 0)), cor: 'text-red-600' },
+                { label: 'Spread Líquido', value: formatarMoeda(Number(tp._sum?.spreadLiquido ?? 0)), cor: 'text-green-700' },
+              ];
+            })() : [
               { label: 'Total de Títulos', value: String(dados.totaisPeriodo._count?.id ?? 0), cor: 'text-gray-800' },
               { label: 'Volume Total', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.valor ?? 0)), cor: 'text-blue-600' },
               { label: 'Total Antecipado', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.valorLiquidoCliente ?? 0)), cor: 'text-green-600' },
               { label: 'Encargos Totais', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.encargo ?? 0)), cor: 'text-amber-600' },
               { label: 'Spread Bruto Total', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.spreadBruto ?? 0)), cor: 'text-purple-600' },
               { label: 'Spread Líquido Total', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.spreadLiquido ?? 0)), cor: 'text-green-700' },
-            ].map(({ label, value, cor }) => (
-              <div key={label} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+            ]}.map(({ label, value, cor }) => (
+              <div key={label} className={`rounded-2xl p-4 border shadow-sm ${espelho ? 'bg-purple-50 border-purple-100' : 'bg-white border-gray-100'}`}>
                 <p className={`text-xl font-bold ${cor}`}>{value}</p>
                 <p className="text-xs text-gray-500 mt-1">{label}</p>
               </div>
@@ -298,19 +369,32 @@ export default function RelatoriosPage() {
 
           <div className="grid lg:grid-cols-2 gap-5">
             {/* Período selecionado */}
-            <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-              <h3 className="font-semibold text-gray-700 mb-4 capitalize">
-                {periodoLabel}
+            <div className={`rounded-2xl p-5 border shadow-sm ${espelho ? 'bg-purple-50 border-purple-100' : 'bg-white border-gray-100'}`}>
+              <h3 className="font-semibold text-gray-700 mb-4 capitalize flex items-center gap-2">
+                {espelho && <Scale className="w-4 h-4 text-purple-600" />}
+                {periodoLabel}{espelho ? ' — Espelho Fiscal' : ''}
               </h3>
               <div className="space-y-3">
-                {[
-                  { label: 'Títulos', value: String(dados.totaisPeriodo._count?.id ?? 0) },
-                  { label: 'Volume', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.valor ?? 0)) },
-                  { label: 'Total Antecipado', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.valorLiquidoCliente ?? 0)) },
-                  { label: 'Spread Bruto', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.spreadBruto ?? 0)) },
-                  { label: 'Imposto Prov.', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.impostoProvisao ?? 0)) },
-                  { label: 'Spread Líquido', value: formatarMoeda(Number(dados.totaisPeriodo._sum?.spreadLiquido ?? 0)) },
-                ].map(({ label, value }) => (
+                {(() => {
+                  const tp = dados.totaisPeriodo;
+                  const spreadBruto = Number(tp._sum?.spreadBruto ?? 0);
+                  const baseEspelho = Number(tp._sum?.baseEspelho ?? 0);
+                  return espelho ? [
+                    { label: 'Títulos', value: String(tp._count?.id ?? 0) },
+                    { label: 'Volume', value: formatarMoeda(Number(tp._sum?.valor ?? 0)) },
+                    { label: 'Base Espelho (0,5% a.m.)', value: formatarMoeda(baseEspelho) },
+                    { label: 'Lucro Tributável', value: formatarMoeda(spreadBruto - baseEspelho) },
+                    { label: 'Imposto Prov. (~7%)', value: formatarMoeda(Number(tp._sum?.impostoProvisao ?? 0)) },
+                    { label: 'Spread Líquido', value: formatarMoeda(Number(tp._sum?.spreadLiquido ?? 0)) },
+                  ] : [
+                    { label: 'Títulos', value: String(tp._count?.id ?? 0) },
+                    { label: 'Volume', value: formatarMoeda(Number(tp._sum?.valor ?? 0)) },
+                    { label: 'Total Antecipado', value: formatarMoeda(Number(tp._sum?.valorLiquidoCliente ?? 0)) },
+                    { label: 'Spread Bruto', value: formatarMoeda(spreadBruto) },
+                    { label: 'Imposto Prov.', value: formatarMoeda(Number(tp._sum?.impostoProvisao ?? 0)) },
+                    { label: 'Spread Líquido', value: formatarMoeda(Number(tp._sum?.spreadLiquido ?? 0)) },
+                  ];
+                })().map(({ label, value }) => (
                   <div key={label} className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0">
                     <span className="text-sm text-gray-600">{label}</span>
                     <span className="text-sm font-semibold text-gray-800">{value}</span>
@@ -351,8 +435,8 @@ export default function RelatoriosPage() {
           {/* Títulos do período */}
           <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
             <h3 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-blue-600" />
-              Títulos — {periodoLabel}
+              {espelho ? <Scale className="w-4 h-4 text-purple-600" /> : <BarChart3 className="w-4 h-4 text-blue-600" />}
+              Títulos — {periodoLabel}{espelho ? ' — Espelho Fiscal' : ''}
               <span className="ml-auto text-xs text-gray-400 font-normal">{dados.titulos.length} título{dados.titulos.length !== 1 ? 's' : ''}</span>
             </h3>
             {dados.titulos.length === 0 ? (
@@ -361,8 +445,8 @@ export default function RelatoriosPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="bg-gray-50">
-                      {['Número', 'Tipo', 'Cliente', 'Vencimento', 'Valor', 'Encargo', 'Spread Líq.', 'Status', ''].map(h => (
+                    <tr className={espelho ? 'bg-purple-50' : 'bg-gray-50'}>
+                      {['Número', 'Tipo', 'Cliente', 'Vencimento', 'Valor', espelho ? 'Base Espelho' : 'Encargo', 'Spread Líq.', 'Status', ''].map(h => (
                         <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
                       ))}
                     </tr>
@@ -375,7 +459,9 @@ export default function RelatoriosPage() {
                         <td className="px-3 py-2.5 text-gray-700">{t.cliente?.nome ?? '—'}</td>
                         <td className="px-3 py-2.5 text-gray-600">{format(new Date(t.dataVencimento), 'dd/MM/yyyy')}</td>
                         <td className="px-3 py-2.5 text-blue-600 font-semibold">{formatarMoeda(Number(t.valor))}</td>
-                        <td className="px-3 py-2.5 text-amber-600">{formatarMoeda(Number(t.encargo))}</td>
+                        <td className={`px-3 py-2.5 ${espelho ? 'text-purple-600' : 'text-amber-600'}`}>
+                          {espelho ? formatarMoeda(Number(t.baseEspelho ?? 0)) : formatarMoeda(Number(t.encargo))}
+                        </td>
                         <td className="px-3 py-2.5 text-green-600 font-semibold">{formatarMoeda(Number(t.spreadLiquido ?? 0))}</td>
                         <td className="px-3 py-2.5">
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${

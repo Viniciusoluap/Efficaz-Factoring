@@ -44,12 +44,12 @@ export async function GET(req: NextRequest) {
 
   const [totaisGeral, totaisPeriodo, porTipo, titulos, clientes, fornecedores] = await Promise.all([
     prisma.titulo.aggregate({
-      _sum: { valor: true, encargo: true, spreadBruto: true, impostoProvisao: true, spreadLiquido: true, valorLiquidoCliente: true },
+      _sum: { valor: true, encargo: true, spreadBruto: true, impostoProvisao: true, spreadLiquido: true, valorLiquidoCliente: true, baseEspelho: true },
       _count: { id: true },
       where: whereGeral,
     }),
     prisma.titulo.aggregate({
-      _sum: { valor: true, encargo: true, spreadBruto: true, impostoProvisao: true, spreadLiquido: true, valorLiquidoCliente: true },
+      _sum: { valor: true, encargo: true, spreadBruto: true, impostoProvisao: true, spreadLiquido: true, valorLiquidoCliente: true, baseEspelho: true },
       _count: { id: true },
       where,
     }),
