@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, FormEvent } from 'react';
-import { Save, Loader2, AlertCircle, CheckCircle2, User, Lock, Image } from 'lucide-react';
+import { useEffect, useState, useRef, FormEvent } from 'react';
+import { Save, Loader2, AlertCircle, CheckCircle2, User, Lock, Camera } from 'lucide-react';
 
 const inputCls = 'w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 bg-gray-50 focus:bg-white transition-all';
 const labelCls = 'block text-xs font-semibold text-gray-600 mb-1';
@@ -9,6 +9,7 @@ const labelCls = 'block text-xs font-semibold text-gray-600 mb-1';
 export default function PortalConfiguracoesPage() {
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
+  const [uploadandoFoto, setUploadandoFoto] = useState(false);
   const [sucesso, setSucesso] = useState('');
   const [erro, setErro] = useState('');
 
@@ -19,6 +20,8 @@ export default function PortalConfiguracoesPage() {
   const [senhaAtual, setSenhaAtual] = useState('');
   const [novaSenha, setNovaSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
+
+  const fotoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch('/api/portal/perfil')
@@ -31,6 +34,40 @@ export default function PortalConfiguracoesPage() {
       })
       .catch(() => setLoading(false));
   }, []);
+
+  const handleFotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadandoFoto(true);
+    setErro('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('pasta', 'fotos-perfil');
+
+      const res = await fetch('/api/portal/upload', { method: 'POST', body: formData });
+      if (!res.ok) throw new Error('Erro ao fazer upload da foto.');
+      const { url } = await res.json();
+
+      // Salva automaticamente no perfil
+      const saveRes = await fetch('/api/portal/perfil', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome, email, fotoUrl: url }),
+      });
+      if (!saveRes.ok) throw new Error('Erro ao salvar foto.');
+
+      setFotoUrl(url);
+      setSucesso('Foto atualizada com sucesso!');
+      setTimeout(() => setSucesso(''), 4000);
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Erro ao atualizar foto.');
+    } finally {
+      setUploadandoFoto(false);
+      e.target.value = '';
+    }
+  };
 
   const handleSalvarPerfil = async (e: FormEvent) => {
     e.preventDefault();
@@ -85,13 +122,51 @@ export default function PortalConfiguracoesPage() {
         </div>
       )}
 
-      {/* Foto de perfil preview */}
-      {fotoUrl && (
-        <div className="flex justify-center">
-          <img src={fotoUrl} alt="Foto de perfil"
-            className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-md" />
-        </div>
-      )}
+      {/* Foto de perfil com upload */}
+      <div className="flex flex-col items-center gap-2">
+        <input
+          ref={fotoInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={handleFotoChange}
+        />
+        <button
+          type="button"
+          onClick={() => fotoInputRef.current?.click()}
+          disabled={uploadandoFoto}
+          className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-md group focus:outline-none disabled:opacity-70"
+        >
+          {fotoUrl ? (
+            <img src={fotoUrl} alt="Foto de perfil" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-blue-100 flex items-center justify-center">
+              <User className="w-10 h-10 text-blue-400" />
+            </div>
+          )}
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            {uploadandoFoto
+              ? <Loader2 className="w-6 h-6 text-white animate-spin" />
+              : <Camera className="w-6 h-6 text-white" />
+            }
+          </div>
+        </button>
+
+        {/* Badge câmera */}
+        <button
+          type="button"
+          onClick={() => fotoInputRef.current?.click()}
+          disabled={uploadandoFoto}
+          className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-100 px-3 py-1.5 rounded-full transition-colors disabled:opacity-60"
+        >
+          {uploadandoFoto
+            ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Enviando foto...</>
+            : <><Camera className="w-3.5 h-3.5" /> {fotoUrl ? 'Alterar foto' : 'Adicionar foto'}</>
+          }
+        </button>
+        <p className="text-xs text-gray-400">Toque na foto ou no botão para tirar ou escolher uma imagem</p>
+      </div>
 
       {/* Dados pessoais */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
@@ -107,13 +182,6 @@ export default function PortalConfiguracoesPage() {
           <div>
             <label className={labelCls}>E-mail</label>
             <input type="email" className={inputCls} value={email} onChange={e => setEmail(e.target.value)} required />
-          </div>
-          <div>
-            <label className={labelCls}>Foto de perfil (URL da imagem)</label>
-            <input type="url" className={inputCls} value={fotoUrl}
-              onChange={e => setFotoUrl(e.target.value)}
-              placeholder="https://exemplo.com/minha-foto.jpg" />
-            <p className="text-xs text-gray-400 mt-1">Cole o link de uma imagem online. Formatos: JPG, PNG, WebP.</p>
           </div>
           <button type="submit" disabled={salvando}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors disabled:opacity-60 shadow-sm text-sm">

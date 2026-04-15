@@ -90,11 +90,12 @@ model SolicitacaoCliente {
   id              String   @id @default(cuid())
   clienteId       String
   cliente         Cliente  @relation(fields: [clienteId], references: [id])
-  tipo            String   // CHEQUE, BOLETO, DUPLICATA, NOTA, OUTRO
+  tipo            String
   descricao       String   @db.Text
   valorEstimado   Decimal? @db.Decimal(15, 2)
   status          String   @default("AGUARDANDO")
   observacaoAdmin String?  @db.Text
+  anexos          String[]
   criadoEm       DateTime @default(now())
   atualizadoEm   DateTime @updatedAt
 

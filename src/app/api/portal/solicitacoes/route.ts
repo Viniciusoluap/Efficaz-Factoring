@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
   if (!clienteId) return NextResponse.json({ error: 'Cliente não vinculado.' }, { status: 403 });
 
   const body = await req.json();
-  const { tipo, descricao, valorEstimado } = body;
+  const { tipo, descricao, valorEstimado, anexos } = body;
 
   if (!tipo || !descricao) {
     return NextResponse.json({ error: 'Tipo e descrição são obrigatórios.' }, { status: 400 });
@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
       tipo,
       descricao,
       valorEstimado: valorEstimado ? parseFloat(valorEstimado) : null,
+      anexos: Array.isArray(anexos) ? anexos : [],
     },
   });
 
