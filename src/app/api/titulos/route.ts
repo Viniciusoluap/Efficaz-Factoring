@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       parseFloat(valor),
       resultado.prazo,
       Number(config?.taxaMinimaFiscal ?? 0.5),
-      Number(config?.aliquotaImposto ?? 7),
+      Number(config?.aliquotaImposto ?? 15),
     );
 
     const titulo = await prisma.titulo.create({

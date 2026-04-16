@@ -6,7 +6,7 @@ import { Save, Settings, AlertCircle, CheckCircle } from 'lucide-react';
 export default function ConfiguracoesPage() {
   const [form, setForm] = useState({
     nomeEmpresa: '', cnpj: '', emailSistema: '',
-    taxaMinimaFiscal: '0.5', aliquotaImposto: '7',
+    taxaMinimaFiscal: '0.5', aliquotaImposto: '15',
   });
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'ok' | 'erro'>('idle');
@@ -18,7 +18,7 @@ export default function ConfiguracoesPage() {
         cnpj: d.cnpj ?? '',
         emailSistema: d.emailSistema ?? '',
         taxaMinimaFiscal: String(d.taxaMinimaFiscal ?? 0.5),
-        aliquotaImposto: String(d.aliquotaImposto ?? 7),
+        aliquotaImposto: String(d.aliquotaImposto ?? 15),
       });
     }).catch(() => {});
   }, []);

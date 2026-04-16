@@ -39,7 +39,7 @@ async function main() {
     create: {
       id: 'default',
       taxaMinimaFiscal: 0.5,
-      aliquotaImposto: 7,
+      aliquotaImposto: 15,
       nomeEmpresa: 'Efficaz Factoring',
       emailSistema: 'contato@grupoefficaz.com.br',
     },

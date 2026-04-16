@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
           parseFloat(t.valor),
           resultado.prazoEfetivo,
           Number(config?.taxaMinimaFiscal ?? 0.5),
-          Number(config?.aliquotaImposto ?? 7),
+          Number(config?.aliquotaImposto ?? 15),
         );
 
         await tx.titulo.create({

@@ -128,14 +128,14 @@ export function calcularFiscal(
   valor: number,
   prazoEfetivo: number,
   taxaMinima: number = 0.5,
-  aliquotaImposto: number = 7
+  aliquotaImposto: number = 15
 ): ResultadoFiscal {
   const txEspelhoDecimal = taxaMinima / 100;
   const baseEspelho = ((valor * txEspelhoDecimal) / 30) * prazoEfetivo;
   const lucroEspelho = resultado.spreadBruto - baseEspelho;
 
-  const impostoProvisao = lucroEspelho > 0
-    ? arredondar((lucroEspelho * aliquotaImposto) / 100)
+  const impostoProvisao = baseEspelho > 0
+    ? arredondar((baseEspelho * aliquotaImposto) / 100)
     : 0;
 
   const spreadLiquido = arredondar(resultado.spreadBruto - impostoProvisao);
