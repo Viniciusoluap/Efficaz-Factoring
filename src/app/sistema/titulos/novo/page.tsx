@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { calcularOperacao, calcularFiscal, formatarMoeda } from '@/lib/calculos';
 import { differenceInDays, format, addDays, isValid } from 'date-fns';
 import { Save, Calculator, AlertCircle, ArrowLeft, Plus, Trash2, ChevronDown, ChevronUp, CheckCircle2, Lock, Copy } from 'lucide-react';
@@ -49,9 +49,13 @@ function calcPreview(t: TituloItem, taxaCliente: string, taxaFornecedor: string)
 
 export default function NovoTituloPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const operacaoId = searchParams.get('operacaoId');
+
   const [etapa, setEtapa] = useState<'configurar' | 'titulos'>('configurar');
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState('');
+  const [operacaoExistente, setOperacaoExistente] = useState<{ numero: string } | null>(null);
 
   // Params fixos da operação
   const [taxaCliente, setTaxaCliente] = useState('');
@@ -79,6 +83,23 @@ export default function NovoTituloPage() {
       setPartesSacados(data.sacados ?? []);
     }).catch(() => {});
   }, []);
+
+  // Se vier com operacaoId, carrega os parâmetros da operação e pula etapa 1
+  useEffect(() => {
+    if (!operacaoId) return;
+    fetch(`/api/operacoes/${operacaoId}`)
+      .then(r => r.json())
+      .then(op => {
+        setTaxaCliente(String(op.taxaCliente));
+        setTaxaFornecedor(String(op.taxaFornecedor));
+        setClienteId(op.clienteId ?? '');
+        setFornecedorId(op.fornecedorId ?? '');
+        setObservacoes(op.observacoes ?? '');
+        setOperacaoExistente({ numero: op.numero });
+        setEtapa('titulos');
+      })
+      .catch(() => {});
+  }, [operacaoId]);
 
   const getSugestoes = (lista: Parte[], texto: string): Parte[] => {
     if (!texto || texto.length < 1) return lista.slice(0, 6);
@@ -170,10 +191,11 @@ export default function NovoTituloPage() {
       const res = await fetch('/api/operacoes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ taxaCliente, taxaFornecedor, clienteId, fornecedorId, observacoes, titulos }),
+        body: JSON.stringify({ taxaCliente, taxaFornecedor, clienteId, fornecedorId, observacoes, titulos, operacaoId }),
       });
       if (!res.ok) throw new Error((await res.json()).error ?? 'Erro ao salvar.');
-      router.push('/sistema/titulos');
+      const data = await res.json();
+      router.push(operacaoId ? `/sistema/operacoes/${operacaoId}` : '/sistema/titulos');
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Erro ao salvar.');
     } finally { setLoading(false); }
@@ -185,8 +207,12 @@ export default function NovoTituloPage() {
 
   return (
     <div className="max-w-4xl space-y-5">
-      <Link href="/sistema/titulos" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
-        <ArrowLeft className="w-4 h-4" /> Voltar
+      <Link
+        href={operacaoId ? `/sistema/operacoes/${operacaoId}` : '/sistema/titulos'}
+        className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        {operacaoExistente ? `Voltar para Operação ${operacaoExistente.numero}` : 'Voltar'}
       </Link>
 
       {/* Stepper */}
@@ -286,6 +312,9 @@ export default function NovoTituloPage() {
           <div className="bg-blue-950 rounded-2xl px-5 py-4 text-white flex flex-wrap items-center gap-4">
             <Lock className="w-4 h-4 text-blue-300 flex-shrink-0" />
             <div className="flex flex-wrap gap-4 flex-1 text-sm">
+              {operacaoExistente && (
+                <span className="text-amber-400 font-semibold">Operação {operacaoExistente.numero}</span>
+              )}
               <span>Taxa Cliente: <strong className="text-amber-400">{taxaCliente}% a.m.</strong></span>
               <span>Taxa Fornecedor: <strong className="text-amber-400">{taxaFornecedor}% a.m.</strong></span>
               {clientes.find(c => c.id === clienteId) && (
@@ -295,10 +324,12 @@ export default function NovoTituloPage() {
                 <span>Fornecedor: <strong>{fornecedores.find(f => f.id === fornecedorId)?.nome}</strong></span>
               )}
             </div>
-            <button onClick={() => setEtapa('configurar')}
-              className="text-xs text-blue-300 hover:text-white underline">
-              Editar
-            </button>
+            {!operacaoExistente && (
+              <button onClick={() => setEtapa('configurar')}
+                className="text-xs text-blue-300 hover:text-white underline">
+                Editar
+              </button>
+            )}
           </div>
 
           {/* Cards de títulos */}
@@ -583,7 +614,7 @@ export default function NovoTituloPage() {
             <button onClick={handleFinalizar} disabled={loading}
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors disabled:opacity-60 shadow-sm text-sm">
               <Save className="w-4 h-4" />
-              {loading ? 'Salvando...' : `Finalizar Operação (${titulos.length} título${titulos.length !== 1 ? 's' : ''})`}
+              {loading ? 'Salvando...' : operacaoExistente ? `Adicionar ${titulos.length} título${titulos.length !== 1 ? 's' : ''} à Operação` : `Finalizar Operação (${titulos.length} título${titulos.length !== 1 ? 's' : ''})`}
             </button>
           </div>
 

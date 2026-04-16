@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { taxaCliente, taxaFornecedor, clienteId, fornecedorId, observacoes, titulos } = body;
+    const { taxaCliente, taxaFornecedor, clienteId, fornecedorId, observacoes, titulos, operacaoId } = body;
 
     if (!taxaCliente || !taxaFornecedor || !titulos?.length) {
       return NextResponse.json({ error: 'Campos obrigatórios ausentes.' }, { status: 400 });
@@ -33,7 +33,62 @@ export async function POST(req: NextRequest) {
 
     const config = await prisma.configuracao.findUnique({ where: { id: 'default' } });
 
-    // Gera número sequencial da operação
+    const criarTituloData = async (tx: any, opId: string, t: any) => {
+      const resultado = calcularOperacao({
+        valor: parseFloat(t.valor),
+        taxaCliente: parseFloat(taxaCliente),
+        taxaFornecedor: parseFloat(taxaFornecedor),
+        dataEmissao: new Date(t.dataEmissao),
+        dataVencimento: new Date(t.dataVencimento),
+      });
+      const fiscal = calcularFiscal(
+        resultado,
+        parseFloat(t.valor),
+        resultado.prazoEfetivo,
+        Number(config?.taxaMinimaFiscal ?? 0.5),
+        Number(config?.aliquotaImposto ?? 15),
+      );
+      await tx.titulo.create({
+        data: {
+          operacaoId: opId,
+          tipo: t.tipo,
+          numero: t.numero,
+          emitenteCpfCnpj: t.emitenteCpfCnpj,
+          emitenteNome: t.emitenteNome,
+          sacadoCpfCnpj: t.sacadoCpfCnpj,
+          sacadoNome: t.sacadoNome,
+          dataEmissao: new Date(t.dataEmissao),
+          dataVencimento: new Date(t.dataVencimento),
+          prazo: resultado.prazo,
+          valor: parseFloat(t.valor),
+          taxaCliente: parseFloat(taxaCliente),
+          taxaFornecedor: parseFloat(taxaFornecedor),
+          encargo: resultado.encargo,
+          valorLiquidoCliente: resultado.valorLiquidoCliente,
+          custoCedente: resultado.custoCedente,
+          spreadBruto: resultado.spreadBruto,
+          taxaEspelho: fiscal.taxaEspelho,
+          baseEspelho: fiscal.baseEspelho,
+          impostoProvisao: fiscal.impostoProvisao,
+          spreadLiquido: fiscal.spreadLiquido,
+          clienteId: clienteId || null,
+          fornecedorId: fornecedorId || null,
+          observacoes: observacoes || null,
+        },
+      });
+    };
+
+    // Adicionar a operação existente
+    if (operacaoId) {
+      const op = await prisma.operacao.findUnique({ where: { id: operacaoId } });
+      if (!op) return NextResponse.json({ error: 'Operação não encontrada.' }, { status: 404 });
+      await prisma.$transaction(async (tx) => {
+        for (const t of titulos) await criarTituloData(tx, operacaoId, t);
+      });
+      return NextResponse.json({ id: operacaoId }, { status: 200 });
+    }
+
+    // Criar nova operação
     const count = await prisma.operacao.count();
     const numero = `OP-${String(count + 1).padStart(5, '0')}`;
 
@@ -48,53 +103,7 @@ export async function POST(req: NextRequest) {
           observacoes: observacoes || null,
         },
       });
-
-      for (const t of titulos) {
-        const resultado = calcularOperacao({
-          valor: parseFloat(t.valor),
-          taxaCliente: parseFloat(taxaCliente),
-          taxaFornecedor: parseFloat(taxaFornecedor),
-          dataEmissao: new Date(t.dataEmissao),
-          dataVencimento: new Date(t.dataVencimento),
-        });
-        const fiscal = calcularFiscal(
-          resultado,
-          parseFloat(t.valor),
-          resultado.prazoEfetivo,
-          Number(config?.taxaMinimaFiscal ?? 0.5),
-          Number(config?.aliquotaImposto ?? 15),
-        );
-
-        await tx.titulo.create({
-          data: {
-            operacaoId: op.id,
-            tipo: t.tipo,
-            numero: t.numero,
-            emitenteCpfCnpj: t.emitenteCpfCnpj,
-            emitenteNome: t.emitenteNome,
-            sacadoCpfCnpj: t.sacadoCpfCnpj,
-            sacadoNome: t.sacadoNome,
-            dataEmissao: new Date(t.dataEmissao),
-            dataVencimento: new Date(t.dataVencimento),
-            prazo: resultado.prazo,
-            valor: parseFloat(t.valor),
-            taxaCliente: parseFloat(taxaCliente),
-            taxaFornecedor: parseFloat(taxaFornecedor),
-            encargo: resultado.encargo,
-            valorLiquidoCliente: resultado.valorLiquidoCliente,
-            custoCedente: resultado.custoCedente,
-            spreadBruto: resultado.spreadBruto,
-            taxaEspelho: fiscal.taxaEspelho,
-            baseEspelho: fiscal.baseEspelho,
-            impostoProvisao: fiscal.impostoProvisao,
-            spreadLiquido: fiscal.spreadLiquido,
-            clienteId: clienteId || null,
-            fornecedorId: fornecedorId || null,
-            observacoes: observacoes || null,
-          },
-        });
-      }
-
+      for (const t of titulos) await criarTituloData(tx, op.id, t);
       return op;
     });
 

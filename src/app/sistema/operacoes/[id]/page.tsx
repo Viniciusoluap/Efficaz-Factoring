@@ -199,6 +199,7 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
       <TitulosSelecionaveis
         titulos={titulosTabela}
         totais={totais}
+        operacaoId={operacao.id}
         operacaoNumero={operacao.numero}
         clienteNome={operacao.cliente?.nome}
         clienteCpfCnpj={operacao.cliente?.cpfCnpj}

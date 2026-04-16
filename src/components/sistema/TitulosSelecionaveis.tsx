@@ -47,12 +47,13 @@ type Totais = {
 type Props = {
   titulos: TituloTabela[];
   totais: Totais;
+  operacaoId: string;
   operacaoNumero: string;
   clienteNome?: string;
   clienteCpfCnpj?: string;
 };
 
-export default function TitulosSelecionaveis({ titulos, totais, operacaoNumero, clienteNome, clienteCpfCnpj }: Props) {
+export default function TitulosSelecionaveis({ titulos, totais, operacaoId, operacaoNumero, clienteNome, clienteCpfCnpj }: Props) {
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [loadingPdf, setLoadingPdf] = useState(false);
   const [loadingEmail, setLoadingEmail] = useState(false);
@@ -150,7 +151,7 @@ export default function TitulosSelecionaveis({ titulos, totais, operacaoNumero, 
           )}
         </div>
         <Link
-          href="/sistema/titulos/novo"
+          href={`/sistema/titulos/novo?operacaoId=${operacaoId}`}
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl transition-colors"
         >
           <Plus className="w-3.5 h-3.5" /> Adicionar Título
