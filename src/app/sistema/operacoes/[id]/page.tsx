@@ -37,7 +37,7 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
     include: {
       cliente: true,
       fornecedor: true,
-      titulos: { orderBy: { criadoEm: 'asc' } },
+      titulos: { orderBy: [{ dataVencimento: 'asc' }, { valor: 'asc' }] },
     },
   });
 
@@ -67,6 +67,7 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
     taxaCliente: Number(operacao.taxaCliente),
     taxaFornecedor: Number(operacao.taxaFornecedor),
     clienteNome: operacao.cliente?.nome,
+    clienteCpfCnpj: operacao.cliente?.cpfCnpj,
     fornecedorNome: operacao.fornecedor?.nome,
     criadoEm: format(new Date(operacao.criadoEm), "dd/MM/yyyy 'às' HH:mm"),
   };

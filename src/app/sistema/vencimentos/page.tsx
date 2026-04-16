@@ -9,7 +9,7 @@ import EnviarComunicacoesBtn from '@/components/sistema/EnviarComunicacoesBtn';
 async function getVencimentos() {
   const titulos = await prisma.titulo.findMany({
     where: { status: { in: [TituloStatus.APROVADO, TituloStatus.VENCIDO] } },
-    orderBy: { dataVencimento: 'asc' },
+    orderBy: [{ dataVencimento: 'asc' }, { valor: 'asc' }],
     include: { cliente: true },
   });
 

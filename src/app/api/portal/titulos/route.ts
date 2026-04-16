@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
       clienteId,
       ...(statusParam ? { status: statusParam as any } : {}),
     },
-    orderBy: [{ dataVencimento: 'asc' }, { valor: 'desc' }],
+    orderBy: [{ dataVencimento: 'asc' }, { valor: 'asc' }],
     include: {
       operacao: { select: { numero: true, status: true } },
     },

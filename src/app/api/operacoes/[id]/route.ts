@@ -11,7 +11,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     include: {
       cliente: true,
       fornecedor: true,
-      titulos: { orderBy: { criadoEm: 'asc' } },
+      titulos: { orderBy: [{ dataVencimento: 'asc' }, { valor: 'asc' }] },
     },
   });
   if (!operacao) return NextResponse.json({ error: 'Não encontrado.' }, { status: 404 });

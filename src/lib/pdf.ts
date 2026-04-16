@@ -256,7 +256,7 @@ export async function gerarContratoPDF(dados: DadosTitulo) {
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(60, 60, 80);
-  doc.text(`Imperatriz – MA, _____ de __________________________ de 20_____`, L, y);
+  doc.text(`Imperatriz – MA, ${dataAtualPorExtenso()}`, L, y);
   y += 14;
 
   // Assinatura esquerda
@@ -337,24 +337,44 @@ export type OperacaoPDF = {
   taxaCliente: number;
   taxaFornecedor: number;
   clienteNome?: string;
+  clienteCpfCnpj?: string;
   fornecedorNome?: string;
   criadoEm: string; // dd/MM/yyyy HH:mm
 };
 
+const MESES_PT = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+
+function dataAtualPorExtenso(): string {
+  const hoje = new Date();
+  return `${hoje.getDate()} de ${MESES_PT[hoje.getMonth()]} de ${hoje.getFullYear()}`;
+}
+
+function parseDateStr(s: string): number {
+  const [d, m, y] = s.split('/').map(Number);
+  return new Date(y, m - 1, d).getTime();
+}
+
 export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: TituloOperacaoPDF[]) {
   if (!titulos.length) return;
+
+  // Ordena por vencimento ASC, valor ASC
+  const titulosOrdenados = [...titulos].sort((a, b) => {
+    const dateDiff = parseDateStr(a.dataVencimento) - parseDateStr(b.dataVencimento);
+    if (dateDiff !== 0) return dateDiff;
+    return a.valor - b.valor;
+  });
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const L = 18;
   const W = 174;
   let y = 0;
 
-  const totalValor = titulos.reduce((s, t) => s + t.valor, 0);
-  const totalEncargo = titulos.reduce((s, t) => s + t.encargo, 0);
-  const totalLiquido = titulos.reduce((s, t) => s + t.valorLiquidoCliente, 0);
+  const totalValor = titulosOrdenados.reduce((s, t) => s + t.valor, 0);
+  const totalEncargo = titulosOrdenados.reduce((s, t) => s + t.encargo, 0);
+  const totalLiquido = titulosOrdenados.reduce((s, t) => s + t.valorLiquidoCliente, 0);
 
-  // Usa o primeiro título como representante para emitente/sacado
-  const t0 = titulos[0];
+  // Usa o primeiro título como referência para sacado
+  const t0 = titulosOrdenados[0];
 
   // ── CABEÇALHO ───────────────────────────────────────────────────
   doc.setFillColor(15, 23, 42);
@@ -395,9 +415,9 @@ export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: T
     `CESSIONÁRIA: ${EMPRESA.razaoSocial}, pessoa jurídica de direito privado, inscrita no CNPJ/MF sob o nº ${EMPRESA.cnpj}, com sede na ${EMPRESA.endereco}, ${EMPRESA.cidade}, ${EMPRESA.cep}, doravante denominada simplesmente "CESSIONÁRIA".`,
     y, L, W);
   y = paragrafo(doc,
-    `CEDENTE: ${t0.emitenteNome}, inscrito(a) no CPF/CNPJ sob o nº ${t0.emitenteCpfCnpj}, doravante denominado(a) simplesmente "CEDENTE".`,
+    `CEDENTE: ${operacao.clienteNome ?? t0.emitenteNome}, inscrito(a) no CPF/CNPJ sob o nº ${operacao.clienteCpfCnpj ?? t0.emitenteCpfCnpj}, doravante denominado(a) simplesmente "CEDENTE".`,
     y, L, W);
-  if (titulos.some(t => t.sacadoNome !== t0.sacadoNome)) {
+  if (titulosOrdenados.some(t => t.sacadoNome !== t0.sacadoNome)) {
     y = paragrafo(doc,
       `DEVEDORES / SACADOS: conforme discriminado na tabela de títulos abaixo.`,
       y, L, W);
@@ -435,7 +455,7 @@ export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: T
     startY: y,
     margin: { left: L, right: L },
     head: [['Nº Título', 'Tipo', 'Emitente', 'Sacado', 'Vencimento', 'Prazo', 'Valor', 'Encargo', 'Líquido']],
-    body: titulos.map(t => [
+    body: titulosOrdenados.map(t => [
       t.numero,
       t.tipo,
       `${t.emitenteNome}\n${t.emitenteCpfCnpj}`,
@@ -535,8 +555,11 @@ export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: T
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(60, 60, 80);
-  doc.text(`Imperatriz – MA, _____ de __________________________ de 20_____`, L, y);
+  doc.text(`Imperatriz – MA, ${dataAtualPorExtenso()}`, L, y);
   y += 14;
+
+  const cedenteName = operacao.clienteNome ?? t0.emitenteNome;
+  const cedenteCpfCnpj = operacao.clienteCpfCnpj ?? t0.emitenteCpfCnpj;
 
   doc.line(L, y, L + 78, y);
   doc.line(112, y, 112 + 78, y);
@@ -545,14 +568,14 @@ export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: T
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.text(EMPRESA.razaoSocial, L, y, { maxWidth: 78 });
-  doc.text(t0.emitenteNome, 112, y, { maxWidth: 78 });
+  doc.text(cedenteName, 112, y, { maxWidth: 78 });
   y += 4;
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(110, 110, 130);
   doc.text(`CNPJ: ${EMPRESA.cnpj}`, L, y);
-  doc.text(`CPF/CNPJ: ${t0.emitenteCpfCnpj}`, 112, y);
+  doc.text(`CPF/CNPJ: ${cedenteCpfCnpj}`, 112, y);
   y += 4;
   doc.text('CESSIONÁRIA', L, y);
   doc.text('CEDENTE', 112, y);
