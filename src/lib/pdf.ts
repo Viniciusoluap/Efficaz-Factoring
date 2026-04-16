@@ -339,7 +339,19 @@ export type OperacaoPDF = {
   clienteNome?: string;
   clienteCpfCnpj?: string;
   fornecedorNome?: string;
+  fornecedorCpfCnpj?: string;
   criadoEm: string; // dd/MM/yyyy HH:mm
+};
+
+export type TituloFornecedorPDF = {
+  numero: string;
+  tipo: string;
+  sacadoNome: string;
+  sacadoCpfCnpj: string;
+  dataVencimento: string;
+  prazo: number;
+  valor: number;
+  custoCedente: number; // encargo do fornecedor (ganho do fornecedor)
 };
 
 const MESES_PT = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -615,6 +627,230 @@ export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: T
 }
 
 // ─── EMISSÃO DE DOCUMENTOS (PROMISSÓRIA / BOLETO / CHEQUE) ───────────────────
+
+// ─── CONTRATO DO FORNECEDOR ──────────────────────────────────────────────────
+
+export async function gerarContratoFornecedorPDF(
+  operacao: OperacaoPDF,
+  titulos: TituloFornecedorPDF[],
+) {
+  if (!titulos.length) return;
+
+  // Ordena por vencimento ASC, valor ASC
+  const titulosOrdenados = [...titulos].sort((a, b) => {
+    const dateDiff = parseDateStr(a.dataVencimento) - parseDateStr(b.dataVencimento);
+    if (dateDiff !== 0) return dateDiff;
+    return a.valor - b.valor;
+  });
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const L = 18;
+  const W = 174;
+  let y = 0;
+
+  const totalValor     = titulosOrdenados.reduce((s, t) => s + t.valor, 0);
+  const totalCusto     = titulosOrdenados.reduce((s, t) => s + t.custoCedente, 0);
+  const totalDeposito  = totalValor - totalCusto; // valor que o fornecedor deposita na Efficaz
+
+  // ── CABEÇALHO ─────────────────────────────────────────────────────────────
+  doc.setFillColor(15, 23, 42);
+  doc.rect(0, 0, 210, 32, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(15);
+  doc.setFont('helvetica', 'bold');
+  doc.text(EMPRESA.fantasia.toUpperCase(), L, 13);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(160, 175, 210);
+  doc.text('CONTRATO DE CESSÃO DE CRÉDITOS — FORNECEDOR DE CAPITAL', L, 20);
+  doc.text(`CNPJ ${EMPRESA.cnpj}  ·  ${EMPRESA.email}`, L, 26);
+
+  y = 42;
+
+  // ── TÍTULO ────────────────────────────────────────────────────────────────
+  doc.setTextColor(15, 23, 42);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text('CONTRATO DE CESSÃO DE CRÉDITOS', 105, y, { align: 'center' });
+  y += 5;
+  doc.text('FORNECEDOR DE CAPITAL', 105, y, { align: 'center' });
+  y += 7;
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 100, 130);
+  doc.text(`Operação Nº ${operacao.numero}  ·  Gerado em ${operacao.criadoEm}  ·  ${titulos.length} título(s)`, 105, y, { align: 'center' });
+  y += 5;
+  doc.setDrawColor(200, 210, 230);
+  doc.setLineWidth(0.4);
+  doc.line(L, y, 210 - L, y);
+  y += 8;
+
+  // ── IDENTIFICAÇÃO DAS PARTES ───────────────────────────────────────────────
+  y = secao(doc, 'IDENTIFICAÇÃO DAS PARTES', y, L);
+
+  // CESSIONÁRIO = Fornecedor
+  y = paragrafo(doc,
+    `CESSIONÁRIO: ${operacao.fornecedorNome ?? '—'}, inscrito(a) no CPF/CNPJ sob o nº ${operacao.fornecedorCpfCnpj ?? '—'}, doravante denominado(a) simplesmente "CESSIONÁRIO".`,
+    y, L, W);
+
+  // CEDENTE = Cliente custodiante
+  y = paragrafo(doc,
+    `CEDENTE: ${operacao.clienteNome ?? '—'}, inscrito(a) no CPF/CNPJ sob o nº ${operacao.clienteCpfCnpj ?? '—'}, doravante denominado(a) simplesmente "CEDENTE".`,
+    y, L, W);
+
+  // INTERMEDIÁRIA = Efficaz
+  y = paragrafo(doc,
+    `INTERMEDIÁRIA/GESTORA: ${EMPRESA.razaoSocial}, pessoa jurídica de direito privado, inscrita no CNPJ/MF sob o nº ${EMPRESA.cnpj}, com sede na ${EMPRESA.endereco}, ${EMPRESA.cidade}, ${EMPRESA.cep}, doravante denominada simplesmente "INTERMEDIÁRIA".`,
+    y, L, W);
+
+  y = paragrafo(doc,
+    `DEVEDORES / SACADOS: conforme discriminado na tabela de títulos abaixo.`,
+    y, L, W);
+
+  // ── CLÁUSULA 1ª ───────────────────────────────────────────────────────────
+  y = secao(doc, 'CLÁUSULA PRIMEIRA – DO OBJETO E DA NATUREZA JURÍDICA', y, L);
+  y = paragrafo(doc,
+    `1.1. O presente instrumento tem por objeto a cessão definitiva e irrevogável, pelo CEDENTE ao CESSIONÁRIO, dos créditos listados na Cláusula Segunda, com a INTERMEDIÁRIA atuando como gestora e facilitadora da operação de fomento mercantil, nos termos dos arts. 286 a 298 do Código Civil Brasileiro (Lei nº 10.406/2002) e em conformidade com a Resolução CMN nº 2.144/1995.`,
+    y, L, W);
+  y = paragrafo(doc,
+    `1.2. A INTERMEDIÁRIA coordena a operação, recebe o depósito do CESSIONÁRIO e realiza o pagamento ao CEDENTE, não assumindo obrigação financeira própria na relação entre CEDENTE e CESSIONÁRIO.`,
+    y, L, W);
+
+  // ── CLÁUSULA 2ª ───────────────────────────────────────────────────────────
+  y = secao(doc, 'CLÁUSULA SEGUNDA – DOS CRÉDITOS CEDIDOS E DAS CONDIÇÕES FINANCEIRAS', y, L);
+  y = paragrafo(doc,
+    `2.1. Os créditos objeto desta cessão totalizam o valor nominal bruto de ${R(totalValor)}, com taxa de cessão do CESSIONÁRIO de ${operacao.taxaFornecedor.toFixed(4)}% ao mês, gerando encargos de ${R(totalCusto)}. O CESSIONÁRIO deverá depositar na conta da INTERMEDIÁRIA o valor de ${R(totalDeposito)}, conforme discriminado abaixo.`,
+    y, L, W);
+
+  const r1 = addPage(doc, y + 10);
+  y = r1.y;
+
+  autoTable(doc, {
+    startY: y,
+    margin: { left: L, right: L },
+    head: [['Nº Título', 'Tipo', 'Sacado', 'Vencimento', 'Prazo', 'Valor Nominal', 'Encargo (Fornecedor)', 'A Depositar']],
+    body: titulosOrdenados.map(t => [
+      t.numero,
+      t.tipo === 'PROMISSORIA' ? 'Promissória' : t.tipo === 'BOLETO' ? 'Boleto' : 'Cheque',
+      `${t.sacadoNome}\n${t.sacadoCpfCnpj}`,
+      t.dataVencimento,
+      `${t.prazo}d`,
+      R(t.valor),
+      R(t.custoCedente),
+      R(t.valor - t.custoCedente),
+    ]),
+    foot: [['TOTAL', '', '', '', '', R(totalValor), R(totalCusto), R(totalDeposito)]],
+    styles: { fontSize: 7.5, cellPadding: 2.5 },
+    headStyles: { fillColor: [15, 23, 42], textColor: 255, fontStyle: 'bold', fontSize: 7.5 },
+    footStyles: { fillColor: [230, 235, 245], textColor: [15, 23, 42], fontStyle: 'bold', fontSize: 7.5 },
+    alternateRowStyles: { fillColor: [245, 248, 255] },
+    columnStyles: {
+      0: { cellWidth: 18 },
+      1: { cellWidth: 18 },
+      2: { cellWidth: 38 },
+      3: { cellWidth: 18 },
+      4: { cellWidth: 10, halign: 'right' },
+      5: { cellWidth: 22, halign: 'right' },
+      6: { cellWidth: 24, halign: 'right' },
+      7: { cellWidth: 24, halign: 'right' },
+    },
+  });
+
+  y = (doc as any).lastAutoTable.finalY + 6;
+
+  y = paragrafo(doc,
+    `2.2. O CESSIONÁRIO deverá depositar na conta da INTERMEDIÁRIA o valor total de ${R(totalDeposito)}, em até 1 (um) dia útil após a assinatura deste instrumento e confirmação do recebimento dos títulos originais ou suas cópias autenticadas.`,
+    y, L, W);
+
+  // ── CLÁUSULA 3ª ───────────────────────────────────────────────────────────
+  y = secao(doc, 'CLÁUSULA TERCEIRA – DAS OBRIGAÇÕES DO CESSIONÁRIO', y, L);
+  const obrigacoes = [
+    `3.1. O CESSIONÁRIO obriga-se a depositar na conta indicada pela INTERMEDIÁRIA o valor de ${R(totalDeposito)} (${valorPorExtenso(totalDeposito)}), no prazo estabelecido na Cláusula Segunda.`,
+    '3.2. O CESSIONÁRIO se responsabiliza pela cobrança dos créditos cedidos diretamente dos DEVEDORES/SACADOS, incumbindo-lhe adotar todas as medidas extrajudiciais e judiciais necessárias para a recuperação dos valores.',
+    '3.3. O CESSIONÁRIO declara ter pleno conhecimento dos títulos cedidos e dos riscos inerentes à cobrança, isentando a INTERMEDIÁRIA de qualquer responsabilidade quanto à inadimplência dos DEVEDORES.',
+  ];
+  for (const o of obrigacoes) { y = paragrafo(doc, o, y, L, W); }
+
+  // ── CLÁUSULA 4ª ───────────────────────────────────────────────────────────
+  y = secao(doc, 'CLÁUSULA QUARTA – DAS GARANTIAS E DECLARAÇÕES DO CEDENTE', y, L);
+  const garantias = [
+    '4.1. O CEDENTE declara que os créditos cedidos são de sua exclusiva titularidade, originados de legítimas transações mercantis já concluídas.',
+    '4.2. O CEDENTE garante que os títulos cedidos não estão sujeitos a qualquer ônus, gravame ou restrição que impeça a presente cessão.',
+    '4.3. O CEDENTE assume co-obrigação solidária em caso de nulidade, falsidade ou inexigibilidade dos títulos cedidos, nos termos do art. 295 do Código Civil.',
+  ];
+  for (const g of garantias) { y = paragrafo(doc, g, y, L, W); }
+
+  // ── CLÁUSULA 5ª ───────────────────────────────────────────────────────────
+  y = secao(doc, 'CLÁUSULA QUINTA – DO PAPEL DA INTERMEDIÁRIA', y, L);
+  y = paragrafo(doc,
+    '5.1. A INTERMEDIÁRIA atua exclusivamente como gestora e facilitadora desta operação, não sendo parte direta na relação creditícia entre CEDENTE e CESSIONÁRIO. A INTERMEDIÁRIA não responde pelo inadimplemento dos DEVEDORES nem pelas obrigações assumidas pelas demais partes.',
+    y, L, W);
+  y = paragrafo(doc,
+    '5.2. A remuneração da INTERMEDIÁRIA pelos serviços de gestão é de responsabilidade exclusiva do CEDENTE, conforme ajuste em separado, não sendo objeto deste instrumento.',
+    y, L, W);
+
+  // ── CLÁUSULA 6ª ───────────────────────────────────────────────────────────
+  y = secao(doc, 'CLÁUSULA SEXTA – DISPOSIÇÕES GERAIS E FORO', y, L);
+  const gerais = [
+    '6.1. Este contrato é celebrado em caráter irrevogável e irretratável, obrigando as partes e seus sucessores.',
+    '6.2. A eventual nulidade de qualquer cláusula não compromete a validade das demais.',
+    '6.3. As partes elegem a assinatura digital ou eletrônica como equivalente à assinatura manuscrita, nos termos da Lei nº 14.063/2020.',
+    `6.4. As partes elegem o foro da ${EMPRESA.foro} para dirimir quaisquer questões oriundas deste contrato.`,
+  ];
+  for (const g of gerais) { y = paragrafo(doc, g, y, L, W); }
+
+  // ── ASSINATURAS ───────────────────────────────────────────────────────────
+  const r2 = addPage(doc, y + 50);
+  y = r2.y + 8;
+
+  doc.setDrawColor(180, 190, 210);
+  doc.setLineWidth(0.3);
+  doc.line(L, y, 210 - L, y);
+  y += 7;
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(60, 60, 80);
+  doc.text(`Imperatriz – MA, ${dataAtualPorExtenso()}`, L, y);
+  y += 14;
+
+  // Três assinaturas: Cessionário | Cedente | Intermediária
+  const colW = 55;
+  const cols = [L, L + colW + 5, L + (colW + 5) * 2];
+
+  for (const cx of cols) { doc.line(cx, y, cx + colW, y); }
+  y += 5;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(15, 23, 42);
+  doc.text(operacao.fornecedorNome ?? 'CESSIONÁRIO', cols[0] + colW / 2, y, { align: 'center', maxWidth: colW });
+  doc.text(operacao.clienteNome ?? 'CEDENTE', cols[1] + colW / 2, y, { align: 'center', maxWidth: colW });
+  doc.text(EMPRESA.razaoSocial, cols[2] + colW / 2, y, { align: 'center', maxWidth: colW });
+  y += 4;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(100, 110, 130);
+  doc.text(`CPF/CNPJ: ${operacao.fornecedorCpfCnpj ?? '—'}`, cols[0] + colW / 2, y, { align: 'center' });
+  doc.text(`CPF/CNPJ: ${operacao.clienteCpfCnpj ?? '—'}`, cols[1] + colW / 2, y, { align: 'center' });
+  doc.text(`CNPJ: ${EMPRESA.cnpj}`, cols[2] + colW / 2, y, { align: 'center' });
+  y += 4;
+  doc.text('CESSIONÁRIO', cols[0] + colW / 2, y, { align: 'center' });
+  doc.text('CEDENTE', cols[1] + colW / 2, y, { align: 'center' });
+  doc.text('INTERMEDIÁRIA', cols[2] + colW / 2, y, { align: 'center' });
+
+  // ── RODAPÉ ────────────────────────────────────────────────────────────────
+  const totalPags = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPags; i++) {
+    doc.setPage(i);
+    doc.setFillColor(15, 23, 42);
+    doc.rect(0, 284, 210, 13, 'F');
+    doc.setFontSize(6.5);
+    doc.setTextColor(160, 175, 210);
+    doc.text(
+      `${EMPRESA.razaoSocial}  ·  CNPJ ${EMPRESA.cnpj}  ·  ${EMPRESA.endereco}, ${EMPRESA.cidade}  ·  ${EMPRESA.email}`,
+      105, 289, { align: 'center' });
+    doc.text(
+      `Operação Nº ${operacao.numero} — Contrato Fornecedor  —  Página ${i} de ${totalPags}`,
+      105, 294, { align: 'center' });
+  }
+
+  doc.save(`contrato-fornecedor-${operacao.numero}.pdf`);
+}
 
 export type TituloDocumentoItem = {
   id: string;

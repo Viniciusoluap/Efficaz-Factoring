@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { FileText, FileSpreadsheet, Loader2, Trash2, AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { gerarContratoOperacaoPDF, OperacaoPDF, TituloOperacaoPDF } from '@/lib/pdf';
+import { gerarContratoOperacaoPDF, gerarContratoFornecedorPDF, OperacaoPDF, TituloOperacaoPDF, TituloFornecedorPDF } from '@/lib/pdf';
 import { exportarTituloXLS } from '@/lib/xls';
 
 type TituloXLS = {
@@ -33,13 +33,15 @@ type TituloXLS = {
 type Props = {
   operacao: OperacaoPDF;
   titulosPDF: TituloOperacaoPDF[];
+  titulosFornecedor: TituloFornecedorPDF[];
   titulosXLS: TituloXLS[];
   operacaoId: string;
 };
 
-export default function OperacaoAcoes({ operacao, titulosPDF, titulosXLS, operacaoId }: Props) {
+export default function OperacaoAcoes({ operacao, titulosPDF, titulosFornecedor, titulosXLS, operacaoId }: Props) {
   const router = useRouter();
   const [loadingPdf, setLoadingPdf] = useState(false);
+  const [loadingPdfForn, setLoadingPdfForn] = useState(false);
   const [loadingXls, setLoadingXls] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
   const [loadingDel, setLoadingDel] = useState(false);
@@ -50,6 +52,15 @@ export default function OperacaoAcoes({ operacao, titulosPDF, titulosXLS, operac
       await gerarContratoOperacaoPDF(operacao, titulosPDF);
     } finally {
       setLoadingPdf(false);
+    }
+  };
+
+  const handlePdfFornecedor = async () => {
+    setLoadingPdfForn(true);
+    try {
+      await gerarContratoFornecedorPDF(operacao, titulosFornecedor);
+    } finally {
+      setLoadingPdfForn(false);
     }
   };
 
@@ -82,6 +93,17 @@ export default function OperacaoAcoes({ operacao, titulosPDF, titulosXLS, operac
         {loadingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
         Contrato PDF
       </button>
+
+      {titulosFornecedor.length > 0 && operacao.fornecedorNome && (
+        <button
+          onClick={handlePdfFornecedor}
+          disabled={loadingPdfForn}
+          className="inline-flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold px-3 py-2 rounded-xl transition-colors disabled:opacity-60 shadow-sm"
+        >
+          {loadingPdfForn ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
+          Contrato Fornecedor
+        </button>
+      )}
 
       <button
         onClick={handleXls}

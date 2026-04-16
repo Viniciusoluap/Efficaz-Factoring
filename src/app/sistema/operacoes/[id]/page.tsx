@@ -47,8 +47,20 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
     clienteNome: operacao.cliente?.nome,
     clienteCpfCnpj: operacao.cliente?.cpfCnpj,
     fornecedorNome: operacao.fornecedor?.nome,
+    fornecedorCpfCnpj: operacao.fornecedor?.cpfCnpj,
     criadoEm: format(new Date(operacao.criadoEm), "dd/MM/yyyy 'às' HH:mm"),
   };
+
+  const titulosFornecedor = operacao.titulos.map(t => ({
+    numero: t.numero,
+    tipo: t.tipo,
+    sacadoNome: t.sacadoNome,
+    sacadoCpfCnpj: t.sacadoCpfCnpj,
+    dataVencimento: format(new Date(t.dataVencimento), 'dd/MM/yyyy'),
+    prazo: t.prazo,
+    valor: Number(t.valor),
+    custoCedente: Number(t.custoCedente),
+  }));
 
   const titulosTabela: TituloTabela[] = operacao.titulos.map(t => ({
     id: t.id,
@@ -118,6 +130,7 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
         <OperacaoAcoes
           operacao={operacaoPDF}
           titulosPDF={titulosPDF}
+          titulosFornecedor={titulosFornecedor}
           titulosXLS={titulosXLS}
           operacaoId={operacao.id}
         />
