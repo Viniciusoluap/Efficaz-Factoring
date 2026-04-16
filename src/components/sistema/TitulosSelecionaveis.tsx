@@ -48,9 +48,11 @@ type Props = {
   titulos: TituloTabela[];
   totais: Totais;
   operacaoNumero: string;
+  clienteNome?: string;
+  clienteCpfCnpj?: string;
 };
 
-export default function TitulosSelecionaveis({ titulos, totais, operacaoNumero }: Props) {
+export default function TitulosSelecionaveis({ titulos, totais, operacaoNumero, clienteNome, clienteCpfCnpj }: Props) {
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [loadingPdf, setLoadingPdf] = useState(false);
   const [loadingEmail, setLoadingEmail] = useState(false);
@@ -102,7 +104,7 @@ export default function TitulosSelecionaveis({ titulos, totais, operacaoNumero }
     if (!sel.length) return;
     setLoadingPdf(true);
     try {
-      const doc = await gerarDocumentosTitulosPDF(sel, operacaoNumero);
+      const doc = await gerarDocumentosTitulosPDF(sel, operacaoNumero, clienteNome, clienteCpfCnpj);
       doc.save(`documentos-op-${operacaoNumero}.pdf`);
     } finally {
       setLoadingPdf(false);
@@ -116,7 +118,7 @@ export default function TitulosSelecionaveis({ titulos, totais, operacaoNumero }
     setLoadingEmail(true);
     setFeedbackEmail(null);
     try {
-      const doc = await gerarDocumentosTitulosPDF(sel, operacaoNumero);
+      const doc = await gerarDocumentosTitulosPDF(sel, operacaoNumero, clienteNome, clienteCpfCnpj);
       const pdfBase64 = doc.output('datauristring').split(',')[1];
       const res = await fetch('/api/titulos/emitir', {
         method: 'POST',

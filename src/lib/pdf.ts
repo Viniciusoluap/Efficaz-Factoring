@@ -909,7 +909,7 @@ function addRodapeDocumento(doc: jsPDF, total: number) {
   }
 }
 
-function gerarPaginaPromissoria(doc: jsPDF, t: TituloDocumentoItem) {
+function gerarPaginaPromissoria(doc: jsPDF, t: TituloDocumentoItem, clienteNome?: string, clienteCpfCnpj?: string) {
   const L = 15, W = 180;
   let y = 18;
 
@@ -996,15 +996,18 @@ function gerarPaginaPromissoria(doc: jsPDF, t: TituloDocumentoItem) {
   doc.text(`Imperatriz – MA, ${t.dataEmissao}`, L, y);
   y += 14;
 
+  const sigNome = clienteNome ?? t.emitenteNome;
+  const sigCpfCnpj = clienteCpfCnpj ?? t.emitenteCpfCnpj;
+
   doc.setLineWidth(0.3);
   doc.setDrawColor(100, 110, 130);
   doc.line(105, y, 205 - L, y);
   y += 4;
   doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
-  doc.text(t.emitenteNome, 105 + (100 - L) / 2, y, { align: 'center', maxWidth: 90 });
+  doc.text(sigNome, 105 + (100 - L) / 2, y, { align: 'center', maxWidth: 90 });
   y += 4;
   doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(100, 110, 130);
-  doc.text(`CPF/CNPJ: ${t.emitenteCpfCnpj}`, 105 + (100 - L) / 2, y, { align: 'center' });
+  doc.text(`CPF/CNPJ: ${sigCpfCnpj}`, 105 + (100 - L) / 2, y, { align: 'center' });
   y += 3;
   doc.text('EMITENTE', 105 + (100 - L) / 2, y, { align: 'center' });
 
@@ -1014,7 +1017,7 @@ function gerarPaginaPromissoria(doc: jsPDF, t: TituloDocumentoItem) {
   doc.text('Documento emitido por sistema eletrônico — Efficaz Factoring', 105, y, { align: 'center' });
 }
 
-function gerarPaginaBoleto(doc: jsPDF, t: TituloDocumentoItem) {
+function gerarPaginaBoleto(doc: jsPDF, t: TituloDocumentoItem, clienteNome?: string, clienteCpfCnpj?: string) {
   const L = 15, W = 180;
   let y = 18;
 
@@ -1077,14 +1080,16 @@ function gerarPaginaBoleto(doc: jsPDF, t: TituloDocumentoItem) {
   doc.text(`CPF/CNPJ: ${t.sacadoCpfCnpj}`, L, y); y += 8;
 
   // Sacador
+  const sacadorNome = clienteNome ?? t.emitenteNome;
+  const sacadorCpfCnpj = clienteCpfCnpj ?? t.emitenteCpfCnpj;
   doc.line(L, y, 210 - L, y); y += 5;
   doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(100, 110, 130);
   doc.text('SACADOR / CEDENTE', L, y); y += 4;
   doc.setFontSize(8.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(15, 23, 42);
-  const emiNome = doc.splitTextToSize(t.emitenteNome, 130);
+  const emiNome = doc.splitTextToSize(sacadorNome, 130);
   doc.text(emiNome, L, y); y += emiNome.length * 4;
   doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(80, 80, 100);
-  doc.text(`CPF/CNPJ: ${t.emitenteCpfCnpj}`, L, y); y += 10;
+  doc.text(`CPF/CNPJ: ${sacadorCpfCnpj}`, L, y); y += 10;
 
   // Instruções
   doc.line(L, y, 210 - L, y); y += 5;
@@ -1140,15 +1145,17 @@ function gerarPaginaCheque(doc: jsPDF, t: TituloDocumentoItem) {
 export async function gerarDocumentosTitulosPDF(
   titulos: TituloDocumentoItem[],
   operacaoNumero: string,
+  clienteNome?: string,
+  clienteCpfCnpj?: string,
 ): Promise<jsPDF> {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
   titulos.forEach((t, idx) => {
     if (idx > 0) doc.addPage();
     if (t.tipo === 'PROMISSORIA') {
-      gerarPaginaPromissoria(doc, t);
+      gerarPaginaPromissoria(doc, t, clienteNome, clienteCpfCnpj);
     } else if (t.tipo === 'BOLETO') {
-      gerarPaginaBoleto(doc, t);
+      gerarPaginaBoleto(doc, t, clienteNome, clienteCpfCnpj);
     } else {
       gerarPaginaCheque(doc, t);
     }
