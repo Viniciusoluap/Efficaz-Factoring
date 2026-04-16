@@ -245,53 +245,53 @@ export async function gerarContratoPDF(dados: DadosTitulo) {
     y, L, W);
 
   // ── ASSINATURAS ─────────────────────────────────────────────────
-  const r2 = addPage(doc, y + 40);
-  y = r2.y + 8;
+  if (y > 190) { doc.addPage(); y = 22; }
+  y += 10;
 
   doc.setDrawColor(180, 190, 210);
   doc.setLineWidth(0.3);
   doc.line(L, y, 210 - L, y);
-  y += 7;
+  y += 8;
 
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(60, 60, 80);
   doc.text(`Imperatriz – MA, ${dataAtualPorExtenso()}`, L, y);
-  y += 14;
+  y += 18;
 
-  // Assinatura esquerda
   doc.line(L, y, L + 78, y);
   doc.line(112, y, 112 + 78, y);
-  y += 5;
+  y += 6;
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
+  doc.setTextColor(15, 23, 42);
   doc.text(EMPRESA.razaoSocial, L, y, { maxWidth: 78 });
   doc.text(dados.emitenteNome, 112, y, { maxWidth: 78 });
-  y += 4;
+  y += 5;
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(110, 110, 130);
   doc.text(`CNPJ: ${EMPRESA.cnpj}`, L, y);
   doc.text(`CPF/CNPJ: ${dados.emitenteCpfCnpj}`, 112, y);
-  y += 4;
+  y += 5;
   doc.text('CESSIONÁRIA', L, y);
   doc.text('CEDENTE', 112, y);
-  y += 12;
+  y += 16;
 
   // Testemunhas
   doc.setTextColor(100, 100, 120);
   doc.setFontSize(7.5);
   doc.text('Testemunha 1:', L, y);
   doc.text('Testemunha 2:', 112, y);
-  y += 4;
+  y += 5;
   doc.line(L, y, L + 78, y);
   doc.line(112, y, 112 + 78, y);
-  y += 4;
+  y += 5;
   doc.text('Nome: _________________________________', L, y);
   doc.text('Nome: _________________________________', 112, y);
-  y += 4;
+  y += 5;
   doc.text('CPF: __________________________________', L, y);
   doc.text('CPF: __________________________________', 112, y);
 
@@ -463,14 +463,17 @@ export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: T
   const r1 = addPage(doc, y + 10);
   y = r1.y;
 
+  const tipoLabel: Record<string, string> = { PROMISSORIA: 'Promissória', BOLETO: 'Boleto', CHEQUE: 'Cheque' };
+  const tblFont = titulosOrdenados.length > 10 ? 6.5 : titulosOrdenados.length > 6 ? 7 : 7.5;
+
   autoTable(doc, {
     startY: y,
     margin: { left: L, right: L },
-    head: [['Nº Título', 'Tipo', 'Emitente', 'Sacado', 'Vencimento', 'Prazo', 'Valor', 'Encargo', 'Líquido']],
+    // Emitente omitido — o CEDENTE já está identificado no texto do contrato
+    head: [['Nº Título', 'Tipo', 'Sacado / Devedor', 'Vencimento', 'Prazo', 'Valor', 'Encargo', 'Líquido']],
     body: titulosOrdenados.map(t => [
       t.numero,
-      t.tipo,
-      `${t.emitenteNome}\n${t.emitenteCpfCnpj}`,
+      tipoLabel[t.tipo] ?? t.tipo,
       `${t.sacadoNome}\n${t.sacadoCpfCnpj}`,
       t.dataVencimento,
       `${t.prazo}d`,
@@ -478,21 +481,20 @@ export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: T
       R(t.encargo),
       R(t.valorLiquidoCliente),
     ]),
-    foot: [['TOTAL', '', '', '', '', '', R(totalValor), R(totalEncargo), R(totalLiquido)]],
-    styles: { fontSize: 7.5, cellPadding: 2.5 },
-    headStyles: { fillColor: [15, 23, 42], textColor: 255, fontStyle: 'bold', fontSize: 7.5 },
-    footStyles: { fillColor: [230, 235, 245], textColor: [15, 23, 42], fontStyle: 'bold', fontSize: 7.5 },
+    foot: [['TOTAL', '', '', '', '', R(totalValor), R(totalEncargo), R(totalLiquido)]],
+    styles: { fontSize: tblFont, cellPadding: 2.5, overflow: 'linebreak' },
+    headStyles: { fillColor: [15, 23, 42], textColor: 255, fontStyle: 'bold', fontSize: tblFont },
+    footStyles: { fillColor: [230, 235, 245], textColor: [15, 23, 42], fontStyle: 'bold', fontSize: tblFont },
     alternateRowStyles: { fillColor: [245, 248, 255] },
     columnStyles: {
       0: { cellWidth: 20 },
-      1: { cellWidth: 16 },
-      2: { cellWidth: 32 },
-      3: { cellWidth: 32 },
-      4: { cellWidth: 18 },
-      5: { cellWidth: 10, halign: 'right' },
-      6: { cellWidth: 18, halign: 'right' },
-      7: { cellWidth: 18, halign: 'right' },
-      8: { cellWidth: 18, halign: 'right' },
+      1: { cellWidth: 20 },
+      2: { cellWidth: 48 },
+      3: { cellWidth: 20 },
+      4: { cellWidth: 10, halign: 'right' },
+      5: { cellWidth: 22, halign: 'right' },
+      6: { cellWidth: 17, halign: 'right' },
+      7: { cellWidth: 17, halign: 'right' },
     },
   });
 
@@ -556,54 +558,57 @@ export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: T
   for (const g of gerais) { y = paragrafo(doc, g, y, L, W); }
 
   // ── ASSINATURAS ─────────────────────────────────────────────────
-  const r2 = addPage(doc, y + 40);
-  y = r2.y + 8;
+  // Bloco de assinatura precisa de ~90mm; se não cabe na página atual, nova página
+  if (y > 190) { doc.addPage(); y = 22; }
+  y += 10;
 
   doc.setDrawColor(180, 190, 210);
   doc.setLineWidth(0.3);
   doc.line(L, y, 210 - L, y);
-  y += 7;
+  y += 8;
 
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(60, 60, 80);
   doc.text(`Imperatriz – MA, ${dataAtualPorExtenso()}`, L, y);
-  y += 14;
+  y += 18;
 
   const cedenteName = operacao.clienteNome ?? t0.emitenteNome;
   const cedenteCpfCnpj = operacao.clienteCpfCnpj ?? t0.emitenteCpfCnpj;
 
+  // Linhas de assinatura
   doc.line(L, y, L + 78, y);
   doc.line(112, y, 112 + 78, y);
-  y += 5;
+  y += 6;
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
+  doc.setTextColor(15, 23, 42);
   doc.text(EMPRESA.razaoSocial, L, y, { maxWidth: 78 });
   doc.text(cedenteName, 112, y, { maxWidth: 78 });
-  y += 4;
+  y += 5;
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(110, 110, 130);
   doc.text(`CNPJ: ${EMPRESA.cnpj}`, L, y);
   doc.text(`CPF/CNPJ: ${cedenteCpfCnpj}`, 112, y);
-  y += 4;
+  y += 5;
   doc.text('CESSIONÁRIA', L, y);
   doc.text('CEDENTE', 112, y);
-  y += 12;
+  y += 16;
 
   doc.setTextColor(100, 100, 120);
   doc.setFontSize(7.5);
   doc.text('Testemunha 1:', L, y);
   doc.text('Testemunha 2:', 112, y);
-  y += 4;
+  y += 5;
   doc.line(L, y, L + 78, y);
   doc.line(112, y, 112 + 78, y);
-  y += 4;
+  y += 5;
   doc.text('Nome: _________________________________', L, y);
   doc.text('Nome: _________________________________', 112, y);
-  y += 4;
+  y += 5;
   doc.text('CPF: __________________________________', L, y);
   doc.text('CPF: __________________________________', 112, y);
 
@@ -800,35 +805,35 @@ export async function gerarContratoFornecedorPDF(
   for (const g of gerais) { y = paragrafo(doc, g, y, L, W); }
 
   // ── ASSINATURAS ───────────────────────────────────────────────────────────
-  const r2 = addPage(doc, y + 50);
-  y = r2.y + 8;
+  if (y > 190) { doc.addPage(); y = 22; }
+  y += 10;
 
   doc.setDrawColor(180, 190, 210);
   doc.setLineWidth(0.3);
   doc.line(L, y, 210 - L, y);
-  y += 7;
+  y += 8;
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(60, 60, 80);
   doc.text(`Imperatriz – MA, ${dataAtualPorExtenso()}`, L, y);
-  y += 14;
+  y += 18;
 
   // Três assinaturas: Cessionário | Cedente | Intermediária
   const colW = 55;
   const cols = [L, L + colW + 5, L + (colW + 5) * 2];
 
   for (const cx of cols) { doc.line(cx, y, cx + colW, y); }
-  y += 5;
+  y += 6;
   doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(15, 23, 42);
   doc.text(operacao.fornecedorNome ?? 'CESSIONÁRIO', cols[0] + colW / 2, y, { align: 'center', maxWidth: colW });
   doc.text(operacao.clienteNome ?? 'CEDENTE', cols[1] + colW / 2, y, { align: 'center', maxWidth: colW });
   doc.text(EMPRESA.razaoSocial, cols[2] + colW / 2, y, { align: 'center', maxWidth: colW });
-  y += 4;
+  y += 5;
   doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(100, 110, 130);
   doc.text(`CPF/CNPJ: ${operacao.fornecedorCpfCnpj ?? '—'}`, cols[0] + colW / 2, y, { align: 'center' });
   doc.text(`CPF/CNPJ: ${operacao.clienteCpfCnpj ?? '—'}`, cols[1] + colW / 2, y, { align: 'center' });
   doc.text(`CNPJ: ${EMPRESA.cnpj}`, cols[2] + colW / 2, y, { align: 'center' });
-  y += 4;
+  y += 5;
   doc.text('CESSIONÁRIO', cols[0] + colW / 2, y, { align: 'center' });
   doc.text('CEDENTE', cols[1] + colW / 2, y, { align: 'center' });
   doc.text('INTERMEDIÁRIA', cols[2] + colW / 2, y, { align: 'center' });
