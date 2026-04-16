@@ -112,7 +112,7 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
   }));
 
   return (
-    <div className="max-w-5xl space-y-5">
+    <div className="w-full space-y-5">
       {/* Breadcrumb */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <Link href="/sistema/titulos" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
@@ -210,49 +210,49 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 text-left">
-                  {['Tipo', 'Número', 'Emissor', 'Vencimento', 'Valor', 'Encargo', 'Líquido', 'Spread', 'Status', ''].map(h => (
-                    <th key={h} className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  {['Tipo', 'Número', 'Sacado', 'Vencimento', 'Valor', 'Encargo', 'Líquido', 'Spread', 'Status', ''].map(h => (
+                    <th key={h} className="px-2 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {operacao.titulos.map((t) => (
                   <tr key={t.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-4 py-3">
-                      <span className={`text-xs px-2 py-1 rounded-lg font-medium ${tipoCor[t.tipo]}`}>
+                    <td className="px-2 py-2">
+                      <span className={`text-xs px-1.5 py-0.5 rounded-lg font-medium ${tipoCor[t.tipo]}`}>
                         {tipoLabel[t.tipo]}
                       </span>
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-gray-600">{t.numero}</td>
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-gray-700 text-xs">{t.emitenteNome}</p>
-                      <p className="text-gray-400 text-xs">{t.emitenteCpfCnpj}</p>
+                    <td className="px-2 py-2 font-mono text-xs text-gray-600 whitespace-nowrap">{t.numero}</td>
+                    <td className="px-2 py-2 max-w-[140px]">
+                      <p className="font-medium text-gray-700 text-xs truncate">{t.sacadoNome}</p>
+                      <p className="text-gray-400 text-xs truncate">{t.sacadoCpfCnpj}</p>
                     </td>
-                    <td className="px-4 py-3 text-gray-600 text-xs whitespace-nowrap">
+                    <td className="px-2 py-2 text-gray-600 text-xs whitespace-nowrap">
                       {format(new Date(t.dataVencimento), 'dd/MM/yyyy')}
                       <p className="text-gray-400">{t.prazo}d</p>
                     </td>
-                    <td className="px-4 py-3 font-semibold text-gray-800 text-xs whitespace-nowrap">
+                    <td className="px-2 py-2 font-semibold text-gray-800 text-xs whitespace-nowrap">
                       {formatarMoeda(Number(t.valor))}
                     </td>
-                    <td className="px-4 py-3 text-amber-600 font-medium text-xs whitespace-nowrap">
+                    <td className="px-2 py-2 text-amber-600 font-medium text-xs whitespace-nowrap">
                       {formatarMoeda(Number(t.encargo))}
                     </td>
-                    <td className="px-4 py-3 text-blue-600 font-medium text-xs whitespace-nowrap">
+                    <td className="px-2 py-2 text-blue-600 font-medium text-xs whitespace-nowrap">
                       {formatarMoeda(Number(t.valorLiquidoCliente))}
                     </td>
-                    <td className="px-4 py-3 text-green-600 font-medium text-xs whitespace-nowrap">
+                    <td className="px-2 py-2 text-green-600 font-medium text-xs whitespace-nowrap">
                       {formatarMoeda(Number(t.spreadBruto))}
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs px-2.5 py-1 rounded-full border font-medium whitespace-nowrap ${statusCor[t.status]}`}>
+                    <td className="px-2 py-2">
+                      <span className={`text-xs px-2 py-0.5 rounded-full border font-medium whitespace-nowrap ${statusCor[t.status]}`}>
                         {statusLabel[t.status]}
                       </span>
                       <div className="mt-1">
                         <AlterarStatusBtn tituloId={t.id} statusAtual={t.status} />
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-2 py-2">
                       <TituloNaOperacaoAcoes tituloId={t.id} />
                     </td>
                   </tr>
@@ -260,11 +260,11 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
               </tbody>
               <tfoot>
                 <tr className="bg-gray-50 font-semibold">
-                  <td colSpan={4} className="px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">Total</td>
-                  <td className="px-4 py-3 text-xs text-gray-800 font-bold">{formatarMoeda(totais.valor)}</td>
-                  <td className="px-4 py-3 text-xs text-amber-600 font-bold">{formatarMoeda(totais.encargo)}</td>
-                  <td className="px-4 py-3 text-xs text-blue-600 font-bold">{formatarMoeda(totais.liquidoCliente)}</td>
-                  <td className="px-4 py-3 text-xs text-green-600 font-bold">{formatarMoeda(totais.spreadBruto)}</td>
+                  <td colSpan={4} className="px-2 py-2 text-xs text-gray-500 uppercase tracking-wide">Total</td>
+                  <td className="px-2 py-2 text-xs text-gray-800 font-bold whitespace-nowrap">{formatarMoeda(totais.valor)}</td>
+                  <td className="px-2 py-2 text-xs text-amber-600 font-bold whitespace-nowrap">{formatarMoeda(totais.encargo)}</td>
+                  <td className="px-2 py-2 text-xs text-blue-600 font-bold whitespace-nowrap">{formatarMoeda(totais.liquidoCliente)}</td>
+                  <td className="px-2 py-2 text-xs text-green-600 font-bold whitespace-nowrap">{formatarMoeda(totais.spreadBruto)}</td>
                   <td colSpan={2} />
                 </tr>
               </tfoot>
