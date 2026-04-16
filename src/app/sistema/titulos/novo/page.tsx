@@ -8,6 +8,8 @@ import { Save, Calculator, AlertCircle, ArrowLeft, Plus, Trash2, ChevronDown, Ch
 import Link from 'next/link';
 import OcrCheque from '@/components/sistema/OcrCheque';
 
+type Parte = { cpfCnpj: string; nome: string };
+
 const hoje = format(new Date(), 'yyyy-MM-dd');
 
 type TituloItem = {
@@ -65,11 +67,36 @@ export default function NovoTituloPage() {
 
   const [clientes, setClientes] = useState<{ id: string; nome: string }[]>([]);
   const [fornecedores, setFornecedores] = useState<{ id: string; nome: string }[]>([]);
+  const [partesEmitentes, setPartesEmitentes] = useState<Parte[]>([]);
+  const [partesSacados, setPartesSacados] = useState<Parte[]>([]);
+  const [sugestaoAberta, setSugestaoAberta] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/clientes?ativo=true').then(r => r.json()).then(setClientes).catch(() => {});
     fetch('/api/fornecedores?ativo=true').then(r => r.json()).then(setFornecedores).catch(() => {});
+    fetch('/api/titulos/partes').then(r => r.json()).then(data => {
+      setPartesEmitentes(data.emitentes ?? []);
+      setPartesSacados(data.sacados ?? []);
+    }).catch(() => {});
   }, []);
+
+  const getSugestoes = (lista: Parte[], texto: string): Parte[] => {
+    if (!texto || texto.length < 1) return lista.slice(0, 6);
+    const lower = texto.toLowerCase();
+    return lista.filter(p =>
+      p.cpfCnpj.includes(texto) || p.nome.toLowerCase().includes(lower)
+    ).slice(0, 6);
+  };
+
+  const selecionarEmitente = (id: string, p: Parte) => {
+    setTitulos(prev => prev.map(t => t.id !== id ? t : { ...t, emitenteCpfCnpj: p.cpfCnpj, emitenteNome: p.nome }));
+    setSugestaoAberta(null);
+  };
+
+  const selecionarSacado = (id: string, p: Parte) => {
+    setTitulos(prev => prev.map(t => t.id !== id ? t : { ...t, sacadoCpfCnpj: p.cpfCnpj, sacadoNome: p.nome }));
+    setSugestaoAberta(null);
+  };
 
   useEffect(() => {
     if (!replicarAberto) return;
@@ -352,6 +379,7 @@ export default function NovoTituloPage() {
 
                     {/* Partes */}
                     <div className="grid grid-cols-2 gap-4">
+                      {/* EMITENTE */}
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <p className="text-xs font-bold text-gray-500 uppercase">Emitente</p>
@@ -366,7 +394,7 @@ export default function NovoTituloPage() {
                               </button>
                               {replicarAberto?.id === t.id && replicarAberto.tipo === 'emitente' && (
                                 <div onClick={e => e.stopPropagation()} className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-30 min-w-[200px] py-1">
-                                  {titulos.filter(o => o.id !== t.id && o.emitenteNome).map((o, oi) => (
+                                  {titulos.filter(o => o.id !== t.id && o.emitenteNome).map((o) => (
                                     <button key={o.id} type="button"
                                       onClick={() => replicarEmitente(t.id, o)}
                                       className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors">
@@ -379,15 +407,57 @@ export default function NovoTituloPage() {
                             </div>
                           )}
                         </div>
-                        <div>
+                        <div className="relative">
                           <label className={labelCls}>CPF/CNPJ *</label>
-                          <input className={inputCls} value={t.emitenteCpfCnpj} onChange={e => setTitulo(t.id, 'emitenteCpfCnpj', e.target.value)} placeholder="000.000.000-00" />
+                          <input
+                            className={inputCls}
+                            value={t.emitenteCpfCnpj}
+                            onChange={e => { setTitulo(t.id, 'emitenteCpfCnpj', e.target.value); setSugestaoAberta(`${t.id}_ec`); }}
+                            onFocus={() => setSugestaoAberta(`${t.id}_ec`)}
+                            onBlur={() => setTimeout(() => setSugestaoAberta(null), 150)}
+                            placeholder="000.000.000-00"
+                          />
+                          {sugestaoAberta === `${t.id}_ec` && getSugestoes(partesEmitentes, t.emitenteCpfCnpj).length > 0 && (
+                            <ul className="absolute z-50 left-0 right-0 top-full mt-0.5 bg-white border border-gray-200 rounded-xl shadow-lg max-h-44 overflow-y-auto">
+                              {getSugestoes(partesEmitentes, t.emitenteCpfCnpj).map(p => (
+                                <li key={p.cpfCnpj}>
+                                  <button type="button" className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors"
+                                    onMouseDown={() => selecionarEmitente(t.id, p)}>
+                                    <p className="text-xs font-semibold text-gray-700">{p.nome}</p>
+                                    <p className="text-xs text-gray-400">{p.cpfCnpj}</p>
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
                         </div>
-                        <div>
+                        <div className="relative">
                           <label className={labelCls}>Nome / Razão Social *</label>
-                          <input className={inputCls} value={t.emitenteNome} onChange={e => setTitulo(t.id, 'emitenteNome', e.target.value)} placeholder="Nome completo" />
+                          <input
+                            className={inputCls}
+                            value={t.emitenteNome}
+                            onChange={e => { setTitulo(t.id, 'emitenteNome', e.target.value); setSugestaoAberta(`${t.id}_en`); }}
+                            onFocus={() => setSugestaoAberta(`${t.id}_en`)}
+                            onBlur={() => setTimeout(() => setSugestaoAberta(null), 150)}
+                            placeholder="Nome completo"
+                          />
+                          {sugestaoAberta === `${t.id}_en` && getSugestoes(partesEmitentes, t.emitenteNome).length > 0 && (
+                            <ul className="absolute z-50 left-0 right-0 top-full mt-0.5 bg-white border border-gray-200 rounded-xl shadow-lg max-h-44 overflow-y-auto">
+                              {getSugestoes(partesEmitentes, t.emitenteNome).map(p => (
+                                <li key={p.cpfCnpj}>
+                                  <button type="button" className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors"
+                                    onMouseDown={() => selecionarEmitente(t.id, p)}>
+                                    <p className="text-xs font-semibold text-gray-700">{p.nome}</p>
+                                    <p className="text-xs text-gray-400">{p.cpfCnpj}</p>
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
                         </div>
                       </div>
+
+                      {/* SACADO */}
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <p className="text-xs font-bold text-gray-500 uppercase">Sacado</p>
@@ -402,7 +472,7 @@ export default function NovoTituloPage() {
                               </button>
                               {replicarAberto?.id === t.id && replicarAberto.tipo === 'sacado' && (
                                 <div onClick={e => e.stopPropagation()} className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-30 min-w-[200px] py-1">
-                                  {titulos.filter(o => o.id !== t.id && o.sacadoNome).map((o, oi) => (
+                                  {titulos.filter(o => o.id !== t.id && o.sacadoNome).map((o) => (
                                     <button key={o.id} type="button"
                                       onClick={() => replicarSacado(t.id, o)}
                                       className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors">
@@ -415,13 +485,53 @@ export default function NovoTituloPage() {
                             </div>
                           )}
                         </div>
-                        <div>
+                        <div className="relative">
                           <label className={labelCls}>CPF/CNPJ *</label>
-                          <input className={inputCls} value={t.sacadoCpfCnpj} onChange={e => setTitulo(t.id, 'sacadoCpfCnpj', e.target.value)} placeholder="000.000.000-00" />
+                          <input
+                            className={inputCls}
+                            value={t.sacadoCpfCnpj}
+                            onChange={e => { setTitulo(t.id, 'sacadoCpfCnpj', e.target.value); setSugestaoAberta(`${t.id}_sc`); }}
+                            onFocus={() => setSugestaoAberta(`${t.id}_sc`)}
+                            onBlur={() => setTimeout(() => setSugestaoAberta(null), 150)}
+                            placeholder="000.000.000-00"
+                          />
+                          {sugestaoAberta === `${t.id}_sc` && getSugestoes(partesSacados, t.sacadoCpfCnpj).length > 0 && (
+                            <ul className="absolute z-50 left-0 right-0 top-full mt-0.5 bg-white border border-gray-200 rounded-xl shadow-lg max-h-44 overflow-y-auto">
+                              {getSugestoes(partesSacados, t.sacadoCpfCnpj).map(p => (
+                                <li key={p.cpfCnpj}>
+                                  <button type="button" className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors"
+                                    onMouseDown={() => selecionarSacado(t.id, p)}>
+                                    <p className="text-xs font-semibold text-gray-700">{p.nome}</p>
+                                    <p className="text-xs text-gray-400">{p.cpfCnpj}</p>
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
                         </div>
-                        <div>
+                        <div className="relative">
                           <label className={labelCls}>Nome / Razão Social *</label>
-                          <input className={inputCls} value={t.sacadoNome} onChange={e => setTitulo(t.id, 'sacadoNome', e.target.value)} placeholder="Nome completo" />
+                          <input
+                            className={inputCls}
+                            value={t.sacadoNome}
+                            onChange={e => { setTitulo(t.id, 'sacadoNome', e.target.value); setSugestaoAberta(`${t.id}_sn`); }}
+                            onFocus={() => setSugestaoAberta(`${t.id}_sn`)}
+                            onBlur={() => setTimeout(() => setSugestaoAberta(null), 150)}
+                            placeholder="Nome completo"
+                          />
+                          {sugestaoAberta === `${t.id}_sn` && getSugestoes(partesSacados, t.sacadoNome).length > 0 && (
+                            <ul className="absolute z-50 left-0 right-0 top-full mt-0.5 bg-white border border-gray-200 rounded-xl shadow-lg max-h-44 overflow-y-auto">
+                              {getSugestoes(partesSacados, t.sacadoNome).map(p => (
+                                <li key={p.cpfCnpj}>
+                                  <button type="button" className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors"
+                                    onMouseDown={() => selecionarSacado(t.id, p)}>
+                                    <p className="text-xs font-semibold text-gray-700">{p.nome}</p>
+                                    <p className="text-xs text-gray-400">{p.cpfCnpj}</p>
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
                         </div>
                       </div>
                     </div>

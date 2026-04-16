@@ -10,6 +10,8 @@ import { calcularOperacao, calcularFiscal } from '@/lib/calculos';
 
 const inputCls = 'w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 bg-gray-50 focus:bg-white transition-all';
 
+type Parte = { cpfCnpj: string; nome: string };
+
 function calcular(valor: number, taxaCliente: number, taxaFornecedor: number, dataEmissao: string, dataVencimento: string) {
   if (!dataEmissao || !dataVencimento || !valor || !taxaCliente) return null;
   try {
@@ -61,8 +63,26 @@ export default function EditarTituloPage() {
 
   type CalcResult = NonNullable<ReturnType<typeof calcular>>;
   const [calc, setCalc] = useState<CalcResult | null>(null);
+  const [partesEmitentes, setPartesEmitentes] = useState<Parte[]>([]);
+  const [partesSacados, setPartesSacados] = useState<Parte[]>([]);
+  const [sugestaoAberta, setSugestaoAberta] = useState<string | null>(null);
 
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
+
+  const getSugestoes = (lista: Parte[], texto: string): Parte[] => {
+    if (!texto || texto.length < 1) return lista.slice(0, 6);
+    const lower = texto.toLowerCase();
+    return lista.filter(p =>
+      p.cpfCnpj.includes(texto) || p.nome.toLowerCase().includes(lower)
+    ).slice(0, 6);
+  };
+
+  useEffect(() => {
+    fetch('/api/titulos/partes').then(r => r.json()).then(data => {
+      setPartesEmitentes(data.emitentes ?? []);
+      setPartesSacados(data.sacados ?? []);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetch(`/api/titulos/${id}`)
@@ -188,13 +208,47 @@ export default function EditarTituloPage() {
             <div className="col-span-2 border-t border-gray-100 pt-3">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Emitente</p>
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className="relative">
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Nome *</label>
-                  <input className={inputCls} value={form.emitenteNome} onChange={e => set('emitenteNome', e.target.value)} required />
+                  <input className={inputCls} value={form.emitenteNome}
+                    onChange={e => { set('emitenteNome', e.target.value); setSugestaoAberta('en'); }}
+                    onFocus={() => setSugestaoAberta('en')}
+                    onBlur={() => setTimeout(() => setSugestaoAberta(null), 150)}
+                    required />
+                  {sugestaoAberta === 'en' && getSugestoes(partesEmitentes, form.emitenteNome).length > 0 && (
+                    <ul className="absolute z-50 left-0 right-0 top-full mt-0.5 bg-white border border-gray-200 rounded-xl shadow-lg max-h-44 overflow-y-auto">
+                      {getSugestoes(partesEmitentes, form.emitenteNome).map(p => (
+                        <li key={p.cpfCnpj}>
+                          <button type="button" className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors"
+                            onMouseDown={() => { set('emitenteNome', p.nome); set('emitenteCpfCnpj', p.cpfCnpj); setSugestaoAberta(null); }}>
+                            <p className="text-xs font-semibold text-gray-700">{p.nome}</p>
+                            <p className="text-xs text-gray-400">{p.cpfCnpj}</p>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
-                <div>
+                <div className="relative">
                   <label className="block text-xs font-semibold text-gray-600 mb-1">CPF / CNPJ *</label>
-                  <input className={inputCls} value={form.emitenteCpfCnpj} onChange={e => set('emitenteCpfCnpj', e.target.value)} required />
+                  <input className={inputCls} value={form.emitenteCpfCnpj}
+                    onChange={e => { set('emitenteCpfCnpj', e.target.value); setSugestaoAberta('ec'); }}
+                    onFocus={() => setSugestaoAberta('ec')}
+                    onBlur={() => setTimeout(() => setSugestaoAberta(null), 150)}
+                    required />
+                  {sugestaoAberta === 'ec' && getSugestoes(partesEmitentes, form.emitenteCpfCnpj).length > 0 && (
+                    <ul className="absolute z-50 left-0 right-0 top-full mt-0.5 bg-white border border-gray-200 rounded-xl shadow-lg max-h-44 overflow-y-auto">
+                      {getSugestoes(partesEmitentes, form.emitenteCpfCnpj).map(p => (
+                        <li key={p.cpfCnpj}>
+                          <button type="button" className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors"
+                            onMouseDown={() => { set('emitenteCpfCnpj', p.cpfCnpj); set('emitenteNome', p.nome); setSugestaoAberta(null); }}>
+                            <p className="text-xs font-semibold text-gray-700">{p.nome}</p>
+                            <p className="text-xs text-gray-400">{p.cpfCnpj}</p>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </div>
             </div>
@@ -202,13 +256,47 @@ export default function EditarTituloPage() {
             <div className="col-span-2 border-t border-gray-100 pt-3">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Sacado</p>
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className="relative">
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Nome *</label>
-                  <input className={inputCls} value={form.sacadoNome} onChange={e => set('sacadoNome', e.target.value)} required />
+                  <input className={inputCls} value={form.sacadoNome}
+                    onChange={e => { set('sacadoNome', e.target.value); setSugestaoAberta('sn'); }}
+                    onFocus={() => setSugestaoAberta('sn')}
+                    onBlur={() => setTimeout(() => setSugestaoAberta(null), 150)}
+                    required />
+                  {sugestaoAberta === 'sn' && getSugestoes(partesSacados, form.sacadoNome).length > 0 && (
+                    <ul className="absolute z-50 left-0 right-0 top-full mt-0.5 bg-white border border-gray-200 rounded-xl shadow-lg max-h-44 overflow-y-auto">
+                      {getSugestoes(partesSacados, form.sacadoNome).map(p => (
+                        <li key={p.cpfCnpj}>
+                          <button type="button" className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors"
+                            onMouseDown={() => { set('sacadoNome', p.nome); set('sacadoCpfCnpj', p.cpfCnpj); setSugestaoAberta(null); }}>
+                            <p className="text-xs font-semibold text-gray-700">{p.nome}</p>
+                            <p className="text-xs text-gray-400">{p.cpfCnpj}</p>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
-                <div>
+                <div className="relative">
                   <label className="block text-xs font-semibold text-gray-600 mb-1">CPF / CNPJ *</label>
-                  <input className={inputCls} value={form.sacadoCpfCnpj} onChange={e => set('sacadoCpfCnpj', e.target.value)} required />
+                  <input className={inputCls} value={form.sacadoCpfCnpj}
+                    onChange={e => { set('sacadoCpfCnpj', e.target.value); setSugestaoAberta('sc'); }}
+                    onFocus={() => setSugestaoAberta('sc')}
+                    onBlur={() => setTimeout(() => setSugestaoAberta(null), 150)}
+                    required />
+                  {sugestaoAberta === 'sc' && getSugestoes(partesSacados, form.sacadoCpfCnpj).length > 0 && (
+                    <ul className="absolute z-50 left-0 right-0 top-full mt-0.5 bg-white border border-gray-200 rounded-xl shadow-lg max-h-44 overflow-y-auto">
+                      {getSugestoes(partesSacados, form.sacadoCpfCnpj).map(p => (
+                        <li key={p.cpfCnpj}>
+                          <button type="button" className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors"
+                            onMouseDown={() => { set('sacadoCpfCnpj', p.cpfCnpj); set('sacadoNome', p.nome); setSugestaoAberta(null); }}>
+                            <p className="text-xs font-semibold text-gray-700">{p.nome}</p>
+                            <p className="text-xs text-gray-400">{p.cpfCnpj}</p>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </div>
             </div>
