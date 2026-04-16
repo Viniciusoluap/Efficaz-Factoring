@@ -1,35 +1,13 @@
 import { prisma } from '@/lib/prisma';
 import { formatarMoeda } from '@/lib/calculos';
-import { TituloStatus, TituloTipo } from '@prisma/client';
 import { format } from 'date-fns';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, FileText, Layers, Plus } from 'lucide-react';
+import { ArrowLeft, Layers } from 'lucide-react';
 import OperacaoStatusBtn from '@/components/sistema/OperacaoStatusBtn';
 import OperacaoAcoes from '@/components/sistema/OperacaoAcoes';
-import TituloNaOperacaoAcoes from '@/components/sistema/TituloNaOperacaoAcoes';
-import AlterarStatusBtn from '@/components/sistema/AlterarStatusBtn';
+import TitulosSelecionaveis, { TituloTabela } from '@/components/sistema/TitulosSelecionaveis';
 
-const statusLabel: Record<TituloStatus, string> = {
-  PENDENTE: 'Pendente', APROVADO: 'Aprovado', VENCIDO: 'Vencido',
-  LIQUIDADO: 'Pago', PROTESTADO: 'Protestado', CANCELADO: 'Cancelado',
-};
-const statusCor: Record<TituloStatus, string> = {
-  PENDENTE: 'bg-amber-100 text-amber-700 border-amber-200',
-  APROVADO: 'bg-green-100 text-green-700 border-green-200',
-  VENCIDO: 'bg-red-100 text-red-700 border-red-200',
-  LIQUIDADO: 'bg-blue-100 text-blue-700 border-blue-200',
-  PROTESTADO: 'bg-purple-100 text-purple-700 border-purple-200',
-  CANCELADO: 'bg-gray-100 text-gray-500 border-gray-200',
-};
-const tipoLabel: Record<TituloTipo, string> = {
-  CHEQUE: 'Cheque', BOLETO: 'Boleto', PROMISSORIA: 'Promissória',
-};
-const tipoCor: Record<TituloTipo, string> = {
-  CHEQUE: 'bg-indigo-50 text-indigo-600',
-  BOLETO: 'bg-cyan-50 text-cyan-600',
-  PROMISSORIA: 'bg-rose-50 text-rose-600',
-};
 
 export default async function OperacaoDetalhePage({ params }: { params: { id: string } }) {
   const operacao = await prisma.operacao.findUnique({
@@ -71,6 +49,24 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
     fornecedorNome: operacao.fornecedor?.nome,
     criadoEm: format(new Date(operacao.criadoEm), "dd/MM/yyyy 'às' HH:mm"),
   };
+
+  const titulosTabela: TituloTabela[] = operacao.titulos.map(t => ({
+    id: t.id,
+    numero: t.numero,
+    tipo: t.tipo,
+    status: t.status,
+    sacadoNome: t.sacadoNome,
+    sacadoCpfCnpj: t.sacadoCpfCnpj,
+    emitenteNome: t.emitenteNome,
+    emitenteCpfCnpj: t.emitenteCpfCnpj,
+    dataVencimento: format(new Date(t.dataVencimento), 'dd/MM/yyyy'),
+    dataEmissao: format(new Date(t.dataEmissao), 'dd/MM/yyyy'),
+    prazo: t.prazo,
+    valor: Number(t.valor),
+    encargo: Number(t.encargo),
+    valorLiquidoCliente: Number(t.valorLiquidoCliente),
+    spreadBruto: Number(t.spreadBruto),
+  }));
 
   const titulosPDF = operacao.titulos.map(t => ({
     numero: t.numero,
@@ -186,93 +182,12 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
         ))}
       </div>
 
-      {/* Tabela de títulos */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FileText className="w-4 h-4 text-blue-600" />
-            <h3 className="font-semibold text-gray-700 text-sm">Títulos desta Operação</h3>
-          </div>
-          <Link
-            href="/sistema/titulos/novo"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl transition-colors"
-          >
-            <Plus className="w-3.5 h-3.5" /> Adicionar Título
-          </Link>
-        </div>
-
-        {operacao.titulos.length === 0 ? (
-          <div className="py-12 text-center">
-            <FileText className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-            <p className="text-gray-400 text-sm">Nenhum título nesta operação.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 text-left">
-                  {['Tipo', 'Número', 'Sacado', 'Vencimento', 'Valor', 'Encargo', 'Líquido', 'Spread', 'Status', ''].map(h => (
-                    <th key={h} className="px-2 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {operacao.titulos.map((t) => (
-                  <tr key={t.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-2 py-2">
-                      <span className={`text-xs px-1.5 py-0.5 rounded-lg font-medium ${tipoCor[t.tipo]}`}>
-                        {tipoLabel[t.tipo]}
-                      </span>
-                    </td>
-                    <td className="px-2 py-2 font-mono text-xs text-gray-600 whitespace-nowrap">{t.numero}</td>
-                    <td className="px-2 py-2 max-w-[140px]">
-                      <p className="font-medium text-gray-700 text-xs truncate">{t.sacadoNome}</p>
-                      <p className="text-gray-400 text-xs truncate">{t.sacadoCpfCnpj}</p>
-                    </td>
-                    <td className="px-2 py-2 text-gray-600 text-xs whitespace-nowrap">
-                      {format(new Date(t.dataVencimento), 'dd/MM/yyyy')}
-                      <p className="text-gray-400">{t.prazo}d</p>
-                    </td>
-                    <td className="px-2 py-2 font-semibold text-gray-800 text-xs whitespace-nowrap">
-                      {formatarMoeda(Number(t.valor))}
-                    </td>
-                    <td className="px-2 py-2 text-amber-600 font-medium text-xs whitespace-nowrap">
-                      {formatarMoeda(Number(t.encargo))}
-                    </td>
-                    <td className="px-2 py-2 text-blue-600 font-medium text-xs whitespace-nowrap">
-                      {formatarMoeda(Number(t.valorLiquidoCliente))}
-                    </td>
-                    <td className="px-2 py-2 text-green-600 font-medium text-xs whitespace-nowrap">
-                      {formatarMoeda(Number(t.spreadBruto))}
-                    </td>
-                    <td className="px-2 py-2">
-                      <span className={`text-xs px-2 py-0.5 rounded-full border font-medium whitespace-nowrap ${statusCor[t.status]}`}>
-                        {statusLabel[t.status]}
-                      </span>
-                      <div className="mt-1">
-                        <AlterarStatusBtn tituloId={t.id} statusAtual={t.status} />
-                      </div>
-                    </td>
-                    <td className="px-2 py-2">
-                      <TituloNaOperacaoAcoes tituloId={t.id} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="bg-gray-50 font-semibold">
-                  <td colSpan={4} className="px-2 py-2 text-xs text-gray-500 uppercase tracking-wide">Total</td>
-                  <td className="px-2 py-2 text-xs text-gray-800 font-bold whitespace-nowrap">{formatarMoeda(totais.valor)}</td>
-                  <td className="px-2 py-2 text-xs text-amber-600 font-bold whitespace-nowrap">{formatarMoeda(totais.encargo)}</td>
-                  <td className="px-2 py-2 text-xs text-blue-600 font-bold whitespace-nowrap">{formatarMoeda(totais.liquidoCliente)}</td>
-                  <td className="px-2 py-2 text-xs text-green-600 font-bold whitespace-nowrap">{formatarMoeda(totais.spreadBruto)}</td>
-                  <td colSpan={2} />
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        )}
-      </div>
+      {/* Tabela de títulos com seleção */}
+      <TitulosSelecionaveis
+        titulos={titulosTabela}
+        totais={totais}
+        operacaoNumero={operacao.numero}
+      />
 
       {operacao.observacoes && (
         <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4">

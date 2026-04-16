@@ -613,3 +613,311 @@ export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: T
 
   doc.save(`contrato-operacao-${operacao.numero}.pdf`);
 }
+
+// ─── EMISSÃO DE DOCUMENTOS (PROMISSÓRIA / BOLETO / CHEQUE) ───────────────────
+
+export type TituloDocumentoItem = {
+  id: string;
+  numero: string;
+  tipo: string;
+  sacadoNome: string;
+  sacadoCpfCnpj: string;
+  emitenteNome: string;
+  emitenteCpfCnpj: string;
+  dataVencimento: string; // dd/MM/yyyy
+  dataEmissao: string;    // dd/MM/yyyy
+  prazo: number;
+  valor: number;
+  encargo: number;
+  valorLiquidoCliente: number;
+};
+
+function valorPorExtenso(valor: number): string {
+  const un = ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove',
+    'dez', 'onze', 'doze', 'treze', 'catorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove'];
+  const dez = ['', '', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'];
+  const cen = ['', 'cento', 'duzentos', 'trezentos', 'quatrocentos', 'quinhentos', 'seiscentos', 'setecentos', 'oitocentos', 'novecentos'];
+  const toW = (n: number): string => {
+    if (n === 0) return '';
+    if (n === 100) return 'cem';
+    if (n < 20) return un[n];
+    if (n < 100) return dez[Math.floor(n / 10)] + (n % 10 ? ' e ' + un[n % 10] : '');
+    if (n < 1000) return cen[Math.floor(n / 100)] + (n % 100 ? ' e ' + toW(n % 100) : '');
+    if (n < 1000000) {
+      const m = Math.floor(n / 1000), r = n % 1000;
+      return (m === 1 ? 'mil' : toW(m) + ' mil') + (r ? (r < 100 ? ' e ' : ', ') + toW(r) : '');
+    }
+    const m = Math.floor(n / 1000000), r = n % 1000000;
+    return (m === 1 ? 'um milhão' : toW(m) + ' milhões') + (r ? ', ' + toW(r) : '');
+  };
+  const reais = Math.floor(valor);
+  const cts = Math.round((valor - reais) * 100);
+  let s = '';
+  if (reais > 0) s += toW(reais) + (reais === 1 ? ' real' : ' reais');
+  if (cts > 0) s += (reais > 0 ? ' e ' : '') + toW(cts) + (cts === 1 ? ' centavo' : ' centavos');
+  if (!s) return 'Zero reais';
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function addRodapeDocumento(doc: jsPDF, total: number) {
+  for (let i = 1; i <= total; i++) {
+    doc.setPage(i);
+    doc.setFillColor(15, 23, 42);
+    doc.rect(0, 284, 210, 13, 'F');
+    doc.setFontSize(6.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(160, 175, 210);
+    doc.text(`${EMPRESA.razaoSocial}  ·  CNPJ ${EMPRESA.cnpj}  ·  ${EMPRESA.email}  ·  ${EMPRESA.telefone}`,
+      105, 289, { align: 'center' });
+    doc.text(`Página ${i} de ${total}`, 105, 294, { align: 'center' });
+  }
+}
+
+function gerarPaginaPromissoria(doc: jsPDF, t: TituloDocumentoItem) {
+  const L = 15, W = 180;
+  let y = 18;
+
+  // Borda
+  doc.setDrawColor(15, 23, 42);
+  doc.setLineWidth(0.6);
+  doc.rect(L - 2, 14, W + 4, 262, 'S');
+
+  // Cabeçalho superior
+  doc.setFillColor(15, 23, 42);
+  doc.rect(L - 2, 14, W + 4, 12, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('NOTA PROMISSÓRIA', 105, y + 4, { align: 'center' });
+
+  y = 34;
+
+  // Linha: Nº e Valor
+  doc.setTextColor(15, 23, 42);
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`Nº ${t.numero}`, L, y);
+  doc.text(`R$ ${R(t.valor)}`, 210 - L, y, { align: 'right' });
+
+  y += 6;
+  doc.setLineWidth(0.3);
+  doc.setDrawColor(180, 190, 210);
+  doc.line(L, y, 210 - L, y);
+  y += 7;
+
+  // Valor por extenso
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(40, 40, 60);
+  const extensoText = `Valor por extenso: ${valorPorExtenso(t.valor)}`;
+  const linhasExtenso = doc.splitTextToSize(extensoText, W);
+  doc.text(linhasExtenso, L, y);
+  y += linhasExtenso.length * 4 + 4;
+
+  // Texto da promissória
+  doc.line(L, y - 2, 210 - L, y - 2);
+  y += 3;
+  const textoProm = `Aos ${t.dataVencimento}, pagarei por esta NOTA PROMISSÓRIA a ${EMPRESA.razaoSocial}, inscrita no CNPJ/MF sob o nº ${EMPRESA.cnpj}, com sede em ${EMPRESA.endereco}, ${EMPRESA.cidade}, ou à sua ordem, a quantia de ${R(t.valor)} (${valorPorExtenso(t.valor)}), pagável na praça de Imperatriz – MA.`;
+  const linhasProm = doc.splitTextToSize(textoProm, W);
+  doc.text(linhasProm, L, y);
+  y += linhasProm.length * 4 + 8;
+
+  // Quadro informativo
+  doc.setFillColor(245, 248, 255);
+  doc.rect(L, y, W, 36, 'F');
+  doc.setDrawColor(210, 220, 235);
+  doc.rect(L, y, W, 36, 'S');
+  y += 5;
+
+  const col1 = L + 3, col2 = L + 65, col3 = L + 120;
+  const labelStyle = () => { doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(100, 110, 130); };
+  const valueStyle = () => { doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(15, 23, 42); };
+
+  labelStyle(); doc.text('EMITENTE', col1, y); doc.text('SACADO / DEVEDOR', col2, y); doc.text('VENCIMENTO', col3, y);
+  y += 4;
+  valueStyle();
+  const emiNome = doc.splitTextToSize(t.emitenteNome, 58);
+  doc.text(emiNome, col1, y);
+  const sacNome = doc.splitTextToSize(t.sacadoNome, 58);
+  doc.text(sacNome, col2, y);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(15, 23, 42);
+  doc.text(t.dataVencimento, col3, y);
+  y += Math.max(emiNome.length, sacNome.length) * 3.8 + 2;
+
+  labelStyle(); doc.text('CPF/CNPJ', col1, y); doc.text('CPF/CNPJ', col2, y); doc.text('PRAZO', col3, y);
+  y += 4;
+  valueStyle();
+  doc.text(t.emitenteCpfCnpj, col1, y);
+  doc.text(t.sacadoCpfCnpj, col2, y);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+  doc.text(`${t.prazo} dias`, col3, y);
+  y += 8;
+
+  // Emissão e assinatura
+  doc.setTextColor(40, 40, 60);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.text(`Imperatriz – MA, ${t.dataEmissao}`, L, y);
+  y += 14;
+
+  doc.setLineWidth(0.3);
+  doc.setDrawColor(100, 110, 130);
+  doc.line(105, y, 205 - L, y);
+  y += 4;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+  doc.text(t.emitenteNome, 105 + (100 - L) / 2, y, { align: 'center', maxWidth: 90 });
+  y += 4;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(100, 110, 130);
+  doc.text(`CPF/CNPJ: ${t.emitenteCpfCnpj}`, 105 + (100 - L) / 2, y, { align: 'center' });
+  y += 3;
+  doc.text('EMITENTE', 105 + (100 - L) / 2, y, { align: 'center' });
+
+  // Marca d'água / aviso
+  y += 12;
+  doc.setFontSize(7); doc.setTextColor(150, 160, 180);
+  doc.text('Documento emitido por sistema eletrônico — Efficaz Factoring', 105, y, { align: 'center' });
+}
+
+function gerarPaginaBoleto(doc: jsPDF, t: TituloDocumentoItem) {
+  const L = 15, W = 180;
+  let y = 18;
+
+  // Cabeçalho
+  doc.setFillColor(15, 23, 42);
+  doc.rect(L - 2, 14, W + 4, 12, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('DUPLICATA / BOLETO DE COBRANÇA', 105, y + 4, { align: 'center' });
+
+  y = 34;
+
+  // Beneficiário
+  doc.setTextColor(15, 23, 42);
+  doc.setFontSize(7); doc.setFont('helvetica', 'bold');
+  doc.text('BENEFICIÁRIO', L, y);
+  y += 4;
+  doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+  doc.text(EMPRESA.razaoSocial, L, y);
+  y += 4;
+  doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(80, 80, 100);
+  doc.text(`CNPJ: ${EMPRESA.cnpj}  ·  ${EMPRESA.endereco}, ${EMPRESA.cidade}  ·  ${EMPRESA.email}`, L, y);
+  y += 6;
+
+  doc.setLineWidth(0.4); doc.setDrawColor(180, 190, 210);
+  doc.line(L, y, 210 - L, y);
+  y += 5;
+
+  // Grid de info principal
+  doc.setFillColor(245, 248, 255);
+  doc.rect(L, y, W, 28, 'F');
+  doc.setDrawColor(210, 220, 235); doc.rect(L, y, W, 28, 'S');
+
+  const col = [L + 3, L + 55, L + 110, L + 145];
+  const row1 = y + 5;
+
+  const lbl = (txt: string, x: number, yy: number) => { doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(100, 110, 130); doc.text(txt, x, yy); };
+  const val = (txt: string, x: number, yy: number, w = 50) => { doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(15, 23, 42); doc.text(doc.splitTextToSize(txt, w), x, yy); };
+
+  lbl('Nº DOCUMENTO', col[0], row1);   val(t.numero, col[0], row1 + 4);
+  lbl('TIPO', col[1], row1);           val(t.tipo === 'BOLETO' ? 'Duplicata Mercantil' : t.tipo, col[1], row1 + 4, 52);
+  lbl('VENCIMENTO', col[2], row1);     doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(15, 23, 42); doc.text(t.dataVencimento, col[2], row1 + 4);
+  lbl('VALOR (R$)', col[3], row1);     doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(15, 23, 42); doc.text(R(t.valor), col[3], row1 + 4);
+
+  const row2 = row1 + 14;
+  lbl('EMISSÃO', col[0], row2);  val(t.dataEmissao, col[0], row2 + 4);
+  lbl('PRAZO', col[1], row2);    val(`${t.prazo} dias`, col[1], row2 + 4);
+
+  y += 33;
+
+  // Pagador
+  doc.setLineWidth(0.3); doc.line(L, y, 210 - L, y); y += 5;
+  doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(100, 110, 130);
+  doc.text('SACADO / PAGADOR', L, y); y += 4;
+  doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(15, 23, 42);
+  const sacNome = doc.splitTextToSize(t.sacadoNome, 130);
+  doc.text(sacNome, L, y); y += sacNome.length * 4;
+  doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(80, 80, 100);
+  doc.text(`CPF/CNPJ: ${t.sacadoCpfCnpj}`, L, y); y += 8;
+
+  // Sacador
+  doc.line(L, y, 210 - L, y); y += 5;
+  doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(100, 110, 130);
+  doc.text('SACADOR / CEDENTE', L, y); y += 4;
+  doc.setFontSize(8.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(15, 23, 42);
+  const emiNome = doc.splitTextToSize(t.emitenteNome, 130);
+  doc.text(emiNome, L, y); y += emiNome.length * 4;
+  doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(80, 80, 100);
+  doc.text(`CPF/CNPJ: ${t.emitenteCpfCnpj}`, L, y); y += 10;
+
+  // Instruções
+  doc.line(L, y, 210 - L, y); y += 5;
+  doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(100, 110, 130);
+  doc.text('INSTRUÇÕES DE COBRANÇA', L, y); y += 4;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(60, 70, 80);
+  doc.text('Após o vencimento, sujeito a multa de 2% e juros de 1% ao mês.', L, y); y += 4;
+  doc.text('Não receber após 30 dias do vencimento.', L, y); y += 10;
+
+  // Área de código de barras (placeholder)
+  doc.setFillColor(240, 243, 250);
+  doc.rect(L, y, W, 18, 'F');
+  doc.setDrawColor(200, 210, 230); doc.rect(L, y, W, 18, 'S');
+  doc.setFontSize(7); doc.setTextColor(150, 160, 175); doc.setFont('helvetica', 'normal');
+  doc.text('[ Código de barras — gerado pela instituição bancária ]', 105, y + 10, { align: 'center' });
+}
+
+function gerarPaginaCheque(doc: jsPDF, t: TituloDocumentoItem) {
+  const L = 15, W = 180;
+  let y = 18;
+
+  doc.setFillColor(15, 23, 42);
+  doc.rect(L - 2, 14, W + 4, 12, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(10); doc.setFont('helvetica', 'bold');
+  doc.text('RECIBO DE CHEQUE', 105, y + 4, { align: 'center' });
+
+  y = 34;
+  doc.setTextColor(15, 23, 42);
+  doc.setFontSize(8.5); doc.setFont('helvetica', 'normal');
+
+  const info = [
+    ['Cheque Nº', t.numero],
+    ['Emitente', `${t.emitenteNome}  |  CPF/CNPJ: ${t.emitenteCpfCnpj}`],
+    ['Sacado / Pagador', `${t.sacadoNome}  |  CPF/CNPJ: ${t.sacadoCpfCnpj}`],
+    ['Vencimento', t.dataVencimento],
+    ['Emissão', t.dataEmissao],
+    ['Prazo', `${t.prazo} dias`],
+    ['Valor', R(t.valor)],
+    ['Valor por Extenso', valorPorExtenso(t.valor)],
+    ['Beneficiário', `${EMPRESA.razaoSocial}  |  CNPJ: ${EMPRESA.cnpj}`],
+  ];
+
+  for (const [label, value] of info) {
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(100, 110, 130);
+    doc.text(label + ':', L, y); y += 4;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(15, 23, 42);
+    const linhas = doc.splitTextToSize(value, W);
+    doc.text(linhas, L, y); y += linhas.length * 4 + 4;
+  }
+}
+
+export async function gerarDocumentosTitulosPDF(
+  titulos: TituloDocumentoItem[],
+  operacaoNumero: string,
+): Promise<jsPDF> {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  titulos.forEach((t, idx) => {
+    if (idx > 0) doc.addPage();
+    if (t.tipo === 'PROMISSORIA') {
+      gerarPaginaPromissoria(doc, t);
+    } else if (t.tipo === 'BOLETO') {
+      gerarPaginaBoleto(doc, t);
+    } else {
+      gerarPaginaCheque(doc, t);
+    }
+  });
+
+  addRodapeDocumento(doc, titulos.length);
+  return doc;
+}
