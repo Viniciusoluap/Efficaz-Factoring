@@ -10,37 +10,25 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
 
     steps:
-      - name: Merge branch into main via GitHub API
-        id: merge
+      - name: Force-update main to HEAD of this branch
         run: |
-          BODY=$(curl -s -X POST \
+          SHA="${{ github.sha }}"
+
+          BODY=$(curl -s -o /tmp/ref_response.json -w "%{http_code}" \
+            -X PATCH \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/${{ github.repository }}/merges" \
-            -d "{\"base\":\"main\",\"head\":\"${{ github.ref_name }}\",\"commit_message\":\"chore: auto-deploy ${{ github.ref_name }}\"}" \
-            -o /tmp/merge_response.json -w "%{http_code}")
+            "https://api.github.com/repos/${{ github.repository }}/git/refs/heads/main" \
+            -d "{\"sha\":\"$SHA\",\"force\":true}")
 
-          RESPONSE=$(cat /tmp/merge_response.json)
-          echo "http_code=$BODY" >> $GITHUB_OUTPUT
-          echo "response=$RESPONSE" >> $GITHUB_OUTPUT
-          echo "HTTP $BODY: $RESPONSE"
+          echo "HTTP $BODY: $(cat /tmp/ref_response.json)"
 
-          if [ "$BODY" = "201" ] || [ "$BODY" = "204" ]; then
-            echo "✅ Merge successful"
+          if [ "$BODY" = "200" ]; then
+            echo "✅ main updated to $SHA — Vercel will deploy automatically."
           else
-            echo "error_msg=HTTP $BODY: $RESPONSE" >> $GITHUB_OUTPUT
+            echo "❌ Failed with HTTP $BODY"
             exit 1
           fi
-
-      - name: Post error as PR comment
-        if: failure()
-        run: |
-          curl -s -X POST \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${{ github.repository }}/issues/3/comments" \
-            -d "{\"body\":\"🔴 **auto-deploy debug** — HTTP ${{ steps.merge.outputs.http_code }}\\n\\n\`\`\`json\\n${{ steps.merge.outputs.response }}\\n\`\`\`\"}"
