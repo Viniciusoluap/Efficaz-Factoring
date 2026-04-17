@@ -1,0 +1,32 @@
+name: Auto-merge Claude fixes → main → Vercel
+
+on:
+  push:
+    branches:
+      - 'claude/**'
+
+jobs:
+  merge-to-main:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git identity
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge feature branch into main
+        run: |
+          git checkout main
+          git pull origin main --rebase
+          git merge origin/${{ github.ref_name }} --no-ff \
+            -m "chore: auto-deploy — merge ${{ github.ref_name }} into main"
+          git push origin main
