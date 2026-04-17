@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { formatarMoeda } from '@/lib/calculos';
+import { formatarMoeda, formatarCpfCnpj } from '@/lib/calculos';
 import { TituloStatus, TituloTipo } from '@prisma/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -112,7 +112,7 @@ export default async function TitulosPage() {
                     <td className="px-4 py-3 font-mono text-xs text-gray-600">{t.numero}</td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-gray-700 text-xs">{t.emitenteNome}</p>
-                      <p className="text-gray-400 text-xs">{t.emitenteCpfCnpj}</p>
+                      <p className="text-gray-400 text-xs">{formatarCpfCnpj(t.emitenteCpfCnpj)}</p>
                     </td>
                     <td className="px-4 py-3 text-gray-600 text-xs">
                       {format(new Date(t.dataVencimento), 'dd/MM/yyyy')}

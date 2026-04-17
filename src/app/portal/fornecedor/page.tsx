@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { formatarMoeda } from '@/lib/calculos';
+import { formatarMoeda, formatarCpfCnpj } from '@/lib/calculos';
 import { format } from 'date-fns';
 import { TituloStatus } from '@prisma/client';
 import { DollarSign, TrendingUp, Clock, BarChart3 } from 'lucide-react';
@@ -47,7 +47,7 @@ export default async function PortalFornecedorPage() {
       <div className="bg-gradient-to-br from-purple-900 to-slate-900 rounded-2xl p-6 text-white">
         <p className="text-white/60 text-sm mb-1">Portal do Fornecedor de Capital</p>
         <h1 className="text-2xl font-bold">{fornecedor.nome}</h1>
-        <p className="text-white/50 text-sm mt-1">{fornecedor.cpfCnpj}</p>
+        <p className="text-white/50 text-sm mt-1">{formatarCpfCnpj(fornecedor.cpfCnpj)}</p>
       </div>
 
       {/* Indicadores */}

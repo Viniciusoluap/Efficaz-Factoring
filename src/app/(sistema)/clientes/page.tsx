@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { formatarMoeda } from '@/lib/calculos';
+import { formatarMoeda, formatarCpfCnpj } from '@/lib/calculos';
 import Link from 'next/link';
 import { Plus, Users, TrendingUp } from 'lucide-react';
 import { format } from 'date-fns';
@@ -44,7 +44,7 @@ export default async function ClientesPage() {
                   </span>
                 </div>
                 <h3 className="font-semibold text-gray-800 text-sm">{c.nome}</h3>
-                <p className="text-xs text-gray-400 mb-3">{c.cpfCnpj} · {c.email}</p>
+                <p className="text-xs text-gray-400 mb-3">{formatarCpfCnpj(c.cpfCnpj)} · {c.email}</p>
                 <div className="grid grid-cols-3 gap-2 pt-3 border-t border-gray-100">
                   <div className="text-center">
                     <p className="text-sm font-bold text-gray-700">{c._count.titulos}</p>

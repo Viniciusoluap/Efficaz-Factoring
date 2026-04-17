@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { formatarMoeda } from '@/lib/calculos';
+import { formatarMoeda, formatarCpfCnpj } from '@/lib/calculos';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { notFound } from 'next/navigation';
@@ -110,8 +110,8 @@ export default async function TituloDetalhePage({ params }: { params: { id: stri
             </h3>
             <div className="grid grid-cols-2 gap-4">
               {[
-                { label: 'Emitente', nome: titulo.emitenteNome, doc: titulo.emitenteCpfCnpj },
-                { label: 'Sacado', nome: titulo.sacadoNome, doc: titulo.sacadoCpfCnpj },
+                { label: 'Emitente', nome: titulo.emitenteNome, doc: formatarCpfCnpj(titulo.emitenteCpfCnpj) },
+                { label: 'Sacado', nome: titulo.sacadoNome, doc: formatarCpfCnpj(titulo.sacadoCpfCnpj) },
               ].map(({ label, nome, doc }) => (
                 <div key={label} className="bg-gray-50 rounded-xl p-3">
                   <p className="text-xs text-gray-500 uppercase font-semibold mb-1">{label}</p>

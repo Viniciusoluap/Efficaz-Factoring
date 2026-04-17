@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { formatarMoeda } from '@/lib/calculos';
+import { formatarMoeda, formatarCpfCnpj } from '@/lib/calculos';
 import { format } from 'date-fns';
 import { TituloStatus, TituloTipo } from '@prisma/client';
 import { FileText, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
@@ -46,7 +46,7 @@ export default async function PortalClientePage() {
       <div className="bg-gradient-to-br from-blue-900 to-slate-900 rounded-2xl p-6 text-white">
         <p className="text-white/60 text-sm mb-1">Bem-vindo ao portal</p>
         <h1 className="text-2xl font-bold">{cliente.nome}</h1>
-        <p className="text-white/50 text-sm mt-1">{cliente.cpfCnpj} · {cliente.email}</p>
+        <p className="text-white/50 text-sm mt-1">{formatarCpfCnpj(cliente.cpfCnpj)} · {cliente.email}</p>
       </div>
 
       {/* Indicadores */}

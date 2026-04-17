@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { formatarMoeda } from '@/lib/calculos';
+import { formatarMoeda, formatarCpfCnpj } from '@/lib/calculos';
 import Link from 'next/link';
 import { Plus, Building2 } from 'lucide-react';
 
@@ -46,7 +46,7 @@ export default async function FornecedoresPage() {
                   </span>
                 </div>
                 <h3 className="font-semibold text-gray-800 text-sm">{f.nome}</h3>
-                <p className="text-xs text-gray-400 mb-3">{f.cpfCnpj} · {f.email}</p>
+                <p className="text-xs text-gray-400 mb-3">{formatarCpfCnpj(f.cpfCnpj)} · {f.email}</p>
 
                 {/* Barra de alocação */}
                 <div className="mb-3">

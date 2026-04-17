@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { CheckSquare, Square, FileText, Mail, Download, Loader2, X, Send } from 'lucide-react';
-import { formatarMoeda } from '@/lib/calculos';
+import { formatarMoeda, formatarCpfCnpj } from '@/lib/calculos';
 import { gerarDocumentosTitulosPDF, TituloDocumentoItem } from '@/lib/pdf';
 import AlterarStatusBtn from './AlterarStatusBtn';
 import TituloNaOperacaoAcoes from './TituloNaOperacaoAcoes';
@@ -257,7 +257,7 @@ export default function TitulosSelecionaveis({ titulos, totais, operacaoId, oper
                     <td className="px-2 py-2 font-mono text-xs text-gray-600 whitespace-nowrap">{t.numero}</td>
                     <td className="px-2 py-2 max-w-[140px]">
                       <p className="font-medium text-gray-700 text-xs truncate">{t.sacadoNome}</p>
-                      <p className="text-gray-400 text-xs truncate">{t.sacadoCpfCnpj}</p>
+                      <p className="text-gray-400 text-xs truncate">{formatarCpfCnpj(t.sacadoCpfCnpj)}</p>
                     </td>
                     <td className="px-2 py-2 text-gray-600 text-xs whitespace-nowrap">
                       {t.dataVencimento}

@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { formatarCpfCnpj } from '@/lib/calculos';
 
 export type DadosTitulo = {
   numero: string;
@@ -114,10 +115,10 @@ export async function gerarContratoPDF(dados: DadosTitulo) {
     `CESSIONÁRIA: ${EMPRESA.razaoSocial}, pessoa jurídica de direito privado, inscrita no CNPJ/MF sob o nº ${EMPRESA.cnpj}, com sede na ${EMPRESA.endereco}, ${EMPRESA.cidade}, ${EMPRESA.cep}, doravante denominada simplesmente "CESSIONÁRIA".`,
     y, L, W);
   y = paragrafo(doc,
-    `CEDENTE: ${dados.emitenteNome}, inscrito(a) no CPF/CNPJ sob o nº ${dados.emitenteCpfCnpj}, doravante denominado(a) simplesmente "CEDENTE".`,
+    `CEDENTE: ${dados.emitenteNome}, inscrito(a) no CPF/CNPJ sob o nº ${formatarCpfCnpj(dados.emitenteCpfCnpj)}, doravante denominado(a) simplesmente "CEDENTE".`,
     y, L, W);
   y = paragrafo(doc,
-    `DEVEDOR / SACADO: ${dados.sacadoNome}, inscrito(a) no CPF/CNPJ sob o nº ${dados.sacadoCpfCnpj}, doravante denominado(a) simplesmente "DEVEDOR".`,
+    `DEVEDOR / SACADO: ${dados.sacadoNome}, inscrito(a) no CPF/CNPJ sob o nº ${formatarCpfCnpj(dados.sacadoCpfCnpj)}, doravante denominado(a) simplesmente "DEVEDOR".`,
     y, L, W);
 
   // ── CLÁUSULA 1ª ─────────────────────────────────────────────────
@@ -135,7 +136,7 @@ export async function gerarContratoPDF(dados: DadosTitulo) {
   // ── CLÁUSULA 2ª ─────────────────────────────────────────────────
   y = secao(doc, 'CLÁUSULA SEGUNDA – DO CRÉDITO CEDIDO E DAS CONDIÇÕES FINANCEIRAS', y, L);
   y = paragrafo(doc,
-    `2.1. O crédito objeto desta cessão é representado pelo ${dados.tipo.toLowerCase()} de nº ${dados.numero}, emitido por ${dados.emitenteNome} (CPF/CNPJ: ${dados.emitenteCpfCnpj}), sacado contra ${dados.sacadoNome} (CPF/CNPJ: ${dados.sacadoCpfCnpj}), com data de emissão em ${dados.dataEmissao} e vencimento em ${dados.dataVencimento}, no valor nominal de ${R(dados.valor)}.`,
+    `2.1. O crédito objeto desta cessão é representado pelo ${dados.tipo.toLowerCase()} de nº ${dados.numero}, emitido por ${dados.emitenteNome} (CPF/CNPJ: ${formatarCpfCnpj(dados.emitenteCpfCnpj)}), sacado contra ${dados.sacadoNome} (CPF/CNPJ: ${formatarCpfCnpj(dados.sacadoCpfCnpj)}), com data de emissão em ${dados.dataEmissao} e vencimento em ${dados.dataVencimento}, no valor nominal de ${R(dados.valor)}.`,
     y, L, W);
 
   const r1 = addPage(doc, y + 10);
@@ -274,7 +275,7 @@ export async function gerarContratoPDF(dados: DadosTitulo) {
   doc.setFontSize(7.5);
   doc.setTextColor(110, 110, 130);
   doc.text(`CNPJ: ${EMPRESA.cnpj}`, L, y);
-  doc.text(`CPF/CNPJ: ${dados.emitenteCpfCnpj}`, 112, y);
+  doc.text(`CPF/CNPJ: ${formatarCpfCnpj(dados.emitenteCpfCnpj)}`, 112, y);
   y += 5;
   doc.text('CESSIONÁRIA', L, y);
   doc.text('CEDENTE', 112, y);
@@ -427,7 +428,7 @@ export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: T
     `CESSIONÁRIA: ${EMPRESA.razaoSocial}, pessoa jurídica de direito privado, inscrita no CNPJ/MF sob o nº ${EMPRESA.cnpj}, com sede na ${EMPRESA.endereco}, ${EMPRESA.cidade}, ${EMPRESA.cep}, doravante denominada simplesmente "CESSIONÁRIA".`,
     y, L, W);
   y = paragrafo(doc,
-    `CEDENTE: ${operacao.clienteNome ?? t0.emitenteNome}, inscrito(a) no CPF/CNPJ sob o nº ${operacao.clienteCpfCnpj ?? t0.emitenteCpfCnpj}, doravante denominado(a) simplesmente "CEDENTE".`,
+    `CEDENTE: ${operacao.clienteNome ?? t0.emitenteNome}, inscrito(a) no CPF/CNPJ sob o nº ${formatarCpfCnpj(operacao.clienteCpfCnpj ?? t0.emitenteCpfCnpj)}, doravante denominado(a) simplesmente "CEDENTE".`,
     y, L, W);
   if (titulosOrdenados.some(t => t.sacadoNome !== t0.sacadoNome)) {
     y = paragrafo(doc,
@@ -435,7 +436,7 @@ export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: T
       y, L, W);
   } else {
     y = paragrafo(doc,
-      `DEVEDOR / SACADO: ${t0.sacadoNome}, inscrito(a) no CPF/CNPJ sob o nº ${t0.sacadoCpfCnpj}, doravante denominado(a) simplesmente "DEVEDOR".`,
+      `DEVEDOR / SACADO: ${t0.sacadoNome}, inscrito(a) no CPF/CNPJ sob o nº ${formatarCpfCnpj(t0.sacadoCpfCnpj)}, doravante denominado(a) simplesmente "DEVEDOR".`,
       y, L, W);
   }
   if (operacao.clienteNome) {
@@ -574,7 +575,7 @@ export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: T
   y += 18;
 
   const cedenteName = operacao.clienteNome ?? t0.emitenteNome;
-  const cedenteCpfCnpj = operacao.clienteCpfCnpj ?? t0.emitenteCpfCnpj;
+  const cedenteCpfCnpj = formatarCpfCnpj(operacao.clienteCpfCnpj ?? t0.emitenteCpfCnpj);
 
   // Linhas de assinatura
   doc.line(L, y, L + 78, y);
@@ -695,12 +696,12 @@ export async function gerarContratoFornecedorPDF(
 
   // CESSIONÁRIO = Fornecedor
   y = paragrafo(doc,
-    `CESSIONÁRIO: ${operacao.fornecedorNome ?? '—'}, inscrito(a) no CPF/CNPJ sob o nº ${operacao.fornecedorCpfCnpj ?? '—'}, doravante denominado(a) simplesmente "CESSIONÁRIO".`,
+    `CESSIONÁRIO: ${operacao.fornecedorNome ?? '—'}, inscrito(a) no CPF/CNPJ sob o nº ${formatarCpfCnpj(operacao.fornecedorCpfCnpj ?? '—')}, doravante denominado(a) simplesmente "CESSIONÁRIO".`,
     y, L, W);
 
   // CEDENTE = Cliente custodiante
   y = paragrafo(doc,
-    `CEDENTE: ${operacao.clienteNome ?? '—'}, inscrito(a) no CPF/CNPJ sob o nº ${operacao.clienteCpfCnpj ?? '—'}, doravante denominado(a) simplesmente "CEDENTE".`,
+    `CEDENTE: ${operacao.clienteNome ?? '—'}, inscrito(a) no CPF/CNPJ sob o nº ${formatarCpfCnpj(operacao.clienteCpfCnpj ?? '—')}, doravante denominado(a) simplesmente "CEDENTE".`,
     y, L, W);
 
   // INTERMEDIÁRIA = Efficaz
@@ -830,8 +831,8 @@ export async function gerarContratoFornecedorPDF(
   doc.text(EMPRESA.razaoSocial, cols[2] + colW / 2, y, { align: 'center', maxWidth: colW });
   y += 5;
   doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(100, 110, 130);
-  doc.text(`CPF/CNPJ: ${operacao.fornecedorCpfCnpj ?? '—'}`, cols[0] + colW / 2, y, { align: 'center' });
-  doc.text(`CPF/CNPJ: ${operacao.clienteCpfCnpj ?? '—'}`, cols[1] + colW / 2, y, { align: 'center' });
+  doc.text(`CPF/CNPJ: ${formatarCpfCnpj(operacao.fornecedorCpfCnpj ?? '—')}`, cols[0] + colW / 2, y, { align: 'center' });
+  doc.text(`CPF/CNPJ: ${formatarCpfCnpj(operacao.clienteCpfCnpj ?? '—')}`, cols[1] + colW / 2, y, { align: 'center' });
   doc.text(`CNPJ: ${EMPRESA.cnpj}`, cols[2] + colW / 2, y, { align: 'center' });
   y += 5;
   doc.text('CESSIONÁRIO', cols[0] + colW / 2, y, { align: 'center' });
@@ -988,8 +989,8 @@ function gerarPaginaPromissoria(doc: jsPDF, t: TituloDocumentoItem, clienteNome?
   labelStyle(); doc.text('CPF/CNPJ', col1, y); doc.text('CPF/CNPJ', col2, y); doc.text('PRAZO', col3, y);
   y += 4;
   valueStyle();
-  doc.text(t.emitenteCpfCnpj, col1, y);
-  doc.text(t.sacadoCpfCnpj, col2, y);
+  doc.text(formatarCpfCnpj(t.emitenteCpfCnpj), col1, y);
+  doc.text(formatarCpfCnpj(t.sacadoCpfCnpj), col2, y);
   doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
   doc.text(`${t.prazo} dias`, col3, y);
   y += 8;
@@ -999,7 +1000,7 @@ function gerarPaginaPromissoria(doc: jsPDF, t: TituloDocumentoItem, clienteNome?
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.text(`Imperatriz – MA, ${t.dataEmissao}`, L, y);
-  y += 14;
+  y += 30;
 
   const sigNome = clienteNome ?? t.emitenteNome;
   const sigCpfCnpj = clienteCpfCnpj ?? t.emitenteCpfCnpj;
@@ -1012,7 +1013,7 @@ function gerarPaginaPromissoria(doc: jsPDF, t: TituloDocumentoItem, clienteNome?
   doc.text(sigNome, 105 + (100 - L) / 2, y, { align: 'center', maxWidth: 90 });
   y += 4;
   doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(100, 110, 130);
-  doc.text(`CPF/CNPJ: ${sigCpfCnpj}`, 105 + (100 - L) / 2, y, { align: 'center' });
+  doc.text(`CPF/CNPJ: ${formatarCpfCnpj(sigCpfCnpj)}`, 105 + (100 - L) / 2, y, { align: 'center' });
   y += 3;
   doc.text('EMITENTE', 105 + (100 - L) / 2, y, { align: 'center' });
 
@@ -1082,7 +1083,7 @@ function gerarPaginaBoleto(doc: jsPDF, t: TituloDocumentoItem, clienteNome?: str
   const sacNome = doc.splitTextToSize(t.sacadoNome, 130);
   doc.text(sacNome, L, y); y += sacNome.length * 4;
   doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(80, 80, 100);
-  doc.text(`CPF/CNPJ: ${t.sacadoCpfCnpj}`, L, y); y += 8;
+  doc.text(`CPF/CNPJ: ${formatarCpfCnpj(t.sacadoCpfCnpj)}`, L, y); y += 8;
 
   // Sacador
   const sacadorNome = clienteNome ?? t.emitenteNome;
@@ -1094,7 +1095,7 @@ function gerarPaginaBoleto(doc: jsPDF, t: TituloDocumentoItem, clienteNome?: str
   const emiNome = doc.splitTextToSize(sacadorNome, 130);
   doc.text(emiNome, L, y); y += emiNome.length * 4;
   doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(80, 80, 100);
-  doc.text(`CPF/CNPJ: ${sacadorCpfCnpj}`, L, y); y += 10;
+  doc.text(`CPF/CNPJ: ${formatarCpfCnpj(sacadorCpfCnpj)}`, L, y); y += 10;
 
   // Instruções
   doc.line(L, y, 210 - L, y); y += 5;
