@@ -750,14 +750,14 @@ export async function gerarContratoFornecedorPDF(
     footStyles: { fillColor: [230, 235, 245], textColor: [15, 23, 42], fontStyle: 'bold', fontSize: 7.5 },
     alternateRowStyles: { fillColor: [245, 248, 255] },
     columnStyles: {
-      0: { cellWidth: 18 },
-      1: { cellWidth: 18 },
+      0: { cellWidth: 14 },
+      1: { cellWidth: 22 },
       2: { cellWidth: 38 },
-      3: { cellWidth: 18 },
-      4: { cellWidth: 10, halign: 'right' },
+      3: { cellWidth: 20 },
+      4: { cellWidth: 8, halign: 'right' },
       5: { cellWidth: 22, halign: 'right' },
-      6: { cellWidth: 24, halign: 'right' },
-      7: { cellWidth: 24, halign: 'right' },
+      6: { cellWidth: 25, halign: 'right' },
+      7: { cellWidth: 25, halign: 'right' },
     },
   });
 
