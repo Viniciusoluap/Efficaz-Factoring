@@ -487,14 +487,14 @@ export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: T
     footStyles: { fillColor: [230, 235, 245], textColor: [15, 23, 42], fontStyle: 'bold', fontSize: tblFont },
     alternateRowStyles: { fillColor: [245, 248, 255] },
     columnStyles: {
-      0: { cellWidth: 20 },
-      1: { cellWidth: 20 },
-      2: { cellWidth: 48 },
+      0: { cellWidth: 16 },
+      1: { cellWidth: 18 },
+      2: { cellWidth: 44 },
       3: { cellWidth: 20 },
-      4: { cellWidth: 10, halign: 'right' },
-      5: { cellWidth: 22, halign: 'right' },
-      6: { cellWidth: 17, halign: 'right' },
-      7: { cellWidth: 17, halign: 'right' },
+      4: { cellWidth: 8, halign: 'right' },
+      5: { cellWidth: 24, halign: 'right' },
+      6: { cellWidth: 22, halign: 'right' },
+      7: { cellWidth: 22, halign: 'right' },
     },
   });
 
