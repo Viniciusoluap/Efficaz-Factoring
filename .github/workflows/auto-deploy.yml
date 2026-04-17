@@ -1,4 +1,4 @@
-name: Auto-merge Claude fixes → main → Vercel
+name: Auto-deploy to Vercel
 
 on:
   push:
@@ -10,23 +10,38 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
 
     steps:
-      - name: Checkout full history
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Configure git identity
+      - name: Configure git
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Merge feature branch into main
+      - name: Merge into main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git checkout main
-          git pull origin main --rebase
-          git merge origin/${{ github.ref_name }} --no-ff \
-            -m "chore: auto-deploy — merge ${{ github.ref_name }} into main"
-          git push origin main
+          BRANCH="${{ github.ref_name }}"
+
+          # Tenta via gh pr merge (respeita proteções de branch)
+          PR=$(gh pr list --head "$BRANCH" --state open --json number -q '.[0].number' 2>/dev/null || true)
+          if [ -n "$PR" ]; then
+            echo "Merging PR #$PR via gh CLI..."
+            gh pr merge "$PR" --merge --squash --delete-branch=false \
+              --subject "chore: auto-deploy $BRANCH"
+          else
+            # Fallback: push direto (funciona se main não tiver branch protection)
+            echo "No open PR found — pushing directly to main..."
+            git fetch origin main
+            git checkout main
+            git pull origin main
+            git merge "origin/$BRANCH" --no-ff -m "chore: auto-deploy $BRANCH"
+            git push origin main
+          fi
