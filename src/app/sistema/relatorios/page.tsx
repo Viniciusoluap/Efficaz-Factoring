@@ -127,7 +127,7 @@ export default function RelatoriosPage() {
       const spreadBrutoPDF = Number(tp._sum?.spreadBruto ?? 0);
       const baseEspelhoPDF = Number(tp._sum?.baseEspelho ?? 0);
       const impostoPDF = espelho ? baseEspelhoPDF * pdfRate : spreadBrutoPDF * pdfRate;
-      const spreadLiquidoPDF = spreadBrutoPDF - impostoPDF;
+      const spreadLiquidoPDF = espelho ? baseEspelhoPDF - impostoPDF : spreadBrutoPDF - impostoPDF;
       autoTable(doc, {
         startY: 50,
         head: [['Indicador', 'Valor']],
@@ -162,7 +162,7 @@ export default function RelatoriosPage() {
       const spreadBrutoGeralPDF = Number(tg._sum?.spreadBruto ?? 0);
       const baseEspelhoGeralPDF = Number(tg._sum?.baseEspelho ?? 0);
       const impostoGeralPDF = espelho ? baseEspelhoGeralPDF * pdfRate : spreadBrutoGeralPDF * pdfRate;
-      const spreadLiquidoGeralPDF = spreadBrutoGeralPDF - impostoGeralPDF;
+      const spreadLiquidoGeralPDF = espelho ? baseEspelhoGeralPDF - impostoGeralPDF : spreadBrutoGeralPDF - impostoGeralPDF;
       autoTable(doc, {
         startY: yGeral + 4,
         head: [['Indicador', 'Valor']],
@@ -350,7 +350,7 @@ export default function RelatoriosPage() {
               const spreadBruto = Number(tp._sum?.spreadBruto ?? 0);
               const baseEsp = Number(tp._sum?.baseEspelho ?? 0);
               const imposto = espelho ? baseEsp * rate : spreadBruto * rate;
-              const spreadLiquido = spreadBruto - imposto;
+              const spreadLiquido = espelho ? baseEsp - imposto : spreadBruto - imposto;
               const cards = espelho ? [
                 { label: 'Total de Títulos', value: String(tp._count?.id ?? 0), cor: 'text-gray-800' },
                 { label: 'Volume Total', value: formatarMoeda(Number(tp._sum?.valor ?? 0)), cor: 'text-blue-600' },
@@ -388,7 +388,7 @@ export default function RelatoriosPage() {
                   const spreadBruto = Number(tp._sum?.spreadBruto ?? 0);
                   const baseEspelho = Number(tp._sum?.baseEspelho ?? 0);
                   const imposto = espelho ? baseEspelho * rate : spreadBruto * rate;
-                  const spreadLiquido = spreadBruto - imposto;
+                  const spreadLiquido = espelho ? baseEspelho - imposto : spreadBruto - imposto;
                   const aliqLabel = `(${(rate * 100).toFixed(2)}%)`;
                   return espelho ? [
                     { label: 'Títulos', value: String(tp._count?.id ?? 0) },
