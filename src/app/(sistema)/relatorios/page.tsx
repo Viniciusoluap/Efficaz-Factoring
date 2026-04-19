@@ -71,7 +71,7 @@ export default async function RelatoriosPage() {
               { label: 'Títulos', value: String(totaisMes._count.id) },
               { label: 'Volume', value: formatarMoeda(Number(totaisMes._sum.valor ?? 0)) },
               { label: 'Spread Bruto', value: formatarMoeda(Number(totaisMes._sum.spreadBruto ?? 0)) },
-              { label: 'Imposto Prov.', value: formatarMoeda(Number(totaisMes._sum.impostoProvisao ?? 0)) },
+              { label: 'Imposto', value: formatarMoeda(Number(totaisMes._sum.impostoProvisao ?? 0)) },
               { label: 'Spread Líquido', value: formatarMoeda(Number(totaisMes._sum.spreadLiquido ?? 0)) },
             ].map(({ label, value }) => (
               <div key={label} className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0">

@@ -131,15 +131,14 @@ export default function RelatoriosPage() {
           ['Títulos no período', String(tp._count?.id ?? 0)],
           ['Volume', formatarMoeda(Number(tp._sum?.valor ?? 0))],
           ['Base Espelho (0,5% a.m.)', formatarMoeda(baseEspelhoPDF)],
-          ['Lucro Tributável', formatarMoeda(spreadBrutoPDF - baseEspelhoPDF)],
-          ['Imposto Provisório (~7%)', formatarMoeda(Number(tp._sum?.impostoProvisao ?? 0))],
+          ['Imposto', formatarMoeda(Number(tp._sum?.impostoProvisao ?? 0))],
           ['Spread Líquido', formatarMoeda(Number(tp._sum?.spreadLiquido ?? 0))],
         ] : [
           ['Títulos no período', String(tp._count?.id ?? 0)],
           ['Volume', formatarMoeda(Number(tp._sum?.valor ?? 0))],
           ['Encargos', formatarMoeda(Number(tp._sum?.encargo ?? 0))],
           ['Spread Bruto', formatarMoeda(spreadBrutoPDF)],
-          ['Imposto Provisório', formatarMoeda(Number(tp._sum?.impostoProvisao ?? 0))],
+          ['Imposto', formatarMoeda(Number(tp._sum?.impostoProvisao ?? 0))],
           ['Spread Líquido', formatarMoeda(Number(tp._sum?.spreadLiquido ?? 0))],
         ],
         styles: { fontSize: 9 },
@@ -165,8 +164,7 @@ export default function RelatoriosPage() {
           ['Total de Títulos', String(tg._count?.id ?? 0)],
           ['Volume Total', formatarMoeda(Number(tg._sum?.valor ?? 0))],
           ['Base Espelho Total', formatarMoeda(baseEspelhoGeralPDF)],
-          ['Lucro Tributável Total', formatarMoeda(spreadBrutoGeralPDF - baseEspelhoGeralPDF)],
-          ['Imposto Provisório Total', formatarMoeda(Number(tg._sum?.impostoProvisao ?? 0))],
+          ['Imposto Total', formatarMoeda(Number(tg._sum?.impostoProvisao ?? 0))],
           ['Spread Líquido Total', formatarMoeda(Number(tg._sum?.spreadLiquido ?? 0))],
         ] : [
           ['Total de Títulos', String(tg._count?.id ?? 0)],
@@ -338,7 +336,7 @@ export default function RelatoriosPage() {
           )}
 
           {/* Resumo geral */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className={`grid grid-cols-2 md:grid-cols-3 ${espelho ? 'lg:grid-cols-5' : 'lg:grid-cols-6'} gap-4`}>
             {(() => {
               const tp = dados.totaisPeriodo;
               const spreadBruto = Number(tp._sum?.spreadBruto ?? 0);
@@ -347,8 +345,7 @@ export default function RelatoriosPage() {
                 { label: 'Total de Títulos', value: String(tp._count?.id ?? 0), cor: 'text-gray-800' },
                 { label: 'Volume Total', value: formatarMoeda(Number(tp._sum?.valor ?? 0)), cor: 'text-blue-600' },
                 { label: 'Base Espelho (0,5%)', value: formatarMoeda(baseEsp), cor: 'text-purple-600' },
-                { label: 'Lucro Tributável', value: formatarMoeda(spreadBruto - baseEsp), cor: 'text-orange-600' },
-                { label: 'Imposto Prov. (~7%)', value: formatarMoeda(Number(tp._sum?.impostoProvisao ?? 0)), cor: 'text-red-600' },
+                { label: 'Imposto', value: formatarMoeda(Number(tp._sum?.impostoProvisao ?? 0)), cor: 'text-red-600' },
                 { label: 'Spread Líquido', value: formatarMoeda(Number(tp._sum?.spreadLiquido ?? 0)), cor: 'text-green-700' },
               ] : [
                 { label: 'Total de Títulos', value: String(tp._count?.id ?? 0), cor: 'text-gray-800' },
@@ -383,15 +380,14 @@ export default function RelatoriosPage() {
                     { label: 'Títulos', value: String(tp._count?.id ?? 0) },
                     { label: 'Volume', value: formatarMoeda(Number(tp._sum?.valor ?? 0)) },
                     { label: 'Base Espelho (0,5% a.m.)', value: formatarMoeda(baseEspelho) },
-                    { label: 'Lucro Tributável', value: formatarMoeda(spreadBruto - baseEspelho) },
-                    { label: 'Imposto Prov. (~7%)', value: formatarMoeda(Number(tp._sum?.impostoProvisao ?? 0)) },
+                    { label: 'Imposto', value: formatarMoeda(Number(tp._sum?.impostoProvisao ?? 0)) },
                     { label: 'Spread Líquido', value: formatarMoeda(Number(tp._sum?.spreadLiquido ?? 0)) },
                   ] : [
                     { label: 'Títulos', value: String(tp._count?.id ?? 0) },
                     { label: 'Volume', value: formatarMoeda(Number(tp._sum?.valor ?? 0)) },
                     { label: 'Total Antecipado', value: formatarMoeda(Number(tp._sum?.valorLiquidoCliente ?? 0)) },
                     { label: 'Spread Bruto', value: formatarMoeda(spreadBruto) },
-                    { label: 'Imposto Prov.', value: formatarMoeda(Number(tp._sum?.impostoProvisao ?? 0)) },
+                    { label: 'Imposto', value: formatarMoeda(Number(tp._sum?.impostoProvisao ?? 0)) },
                     { label: 'Spread Líquido', value: formatarMoeda(Number(tp._sum?.spreadLiquido ?? 0)) },
                   ];
                 })().map(({ label, value }) => (
