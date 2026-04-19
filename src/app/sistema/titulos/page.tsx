@@ -24,7 +24,7 @@ function opStatusInfo(status: string): { label: string; cls: string } {
 
 export default async function TitulosPage() {
   const operacoes = await prisma.operacao.findMany({
-    orderBy: [{ dataVencimento: 'asc' }, { valor: 'asc' }],
+    orderBy: { criadoEm: 'desc' },
     include: {
       cliente: { select: { nome: true } },
       fornecedor: { select: { nome: true } },

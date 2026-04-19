@@ -226,7 +226,13 @@ model Solicitacao {
 model Configuracao {
   id               String   @id @default("default")
   taxaMinimaFiscal Decimal  @default(0.5)  @db.Decimal(8, 4)
-  aliquotaImposto  Decimal  @default(15)   @db.Decimal(5, 2)
+  aliquotaImposto  Decimal  @default(35)   @db.Decimal(5, 2)
+  aliquotaPIS      Decimal  @default(1.65) @db.Decimal(5, 2)
+  aliquotaCOFINS   Decimal  @default(7.6)  @db.Decimal(5, 2)
+  aliquotaIRPJ     Decimal  @default(15)   @db.Decimal(5, 2)
+  aliquotaCSLL     Decimal  @default(9)    @db.Decimal(5, 2)
+  aliquotaISS      Decimal  @default(5)    @db.Decimal(5, 2)
+  aliquotaIOF      Decimal  @default(0.38) @db.Decimal(5, 2)
   nomeEmpresa      String   @default("Efficaz Factoring")
   cnpj             String?
   emailSistema     String?

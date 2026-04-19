@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 export async function GET() {
@@ -8,25 +9,40 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  if (!token) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
 
-  const { nomeEmpresa, cnpj, emailSistema, taxaMinimaFiscal, aliquotaImposto } = await req.json();
-
-  const config = await prisma.configuracao.upsert({
-    where: { id: 'default' },
-    update: {
+  try {
+    const {
       nomeEmpresa, cnpj, emailSistema,
-      taxaMinimaFiscal: parseFloat(taxaMinimaFiscal),
-      aliquotaImposto: parseFloat(aliquotaImposto),
-    },
-    create: {
-      id: 'default',
-      nomeEmpresa, cnpj, emailSistema,
-      taxaMinimaFiscal: parseFloat(taxaMinimaFiscal),
-      aliquotaImposto: parseFloat(aliquotaImposto),
-    },
-  });
+      taxaMinimaFiscal, aliquotaImposto,
+      aliquotaPIS, aliquotaCOFINS, aliquotaIRPJ,
+      aliquotaCSLL, aliquotaISS, aliquotaIOF,
+    } = await req.json();
 
-  return NextResponse.json(config);
+    const data = {
+      nomeEmpresa: nomeEmpresa || 'Efficaz Factoring',
+      cnpj: cnpj || null,
+      emailSistema: emailSistema || null,
+      taxaMinimaFiscal: parseFloat(taxaMinimaFiscal) || 0.5,
+      aliquotaImposto: parseFloat(aliquotaImposto) || 35,
+      aliquotaPIS: parseFloat(aliquotaPIS) || 1.65,
+      aliquotaCOFINS: parseFloat(aliquotaCOFINS) || 7.6,
+      aliquotaIRPJ: parseFloat(aliquotaIRPJ) || 15,
+      aliquotaCSLL: parseFloat(aliquotaCSLL) || 9,
+      aliquotaISS: parseFloat(aliquotaISS) || 5,
+      aliquotaIOF: parseFloat(aliquotaIOF) || 0.38,
+    };
+
+    const config = await prisma.configuracao.upsert({
+      where: { id: 'default' },
+      update: data,
+      create: { id: 'default', ...data },
+    });
+
+    return NextResponse.json(config);
+  } catch (err) {
+    console.error('[PUT /api/configuracoes]', err);
+    return NextResponse.json({ error: 'Erro ao salvar configurações.' }, { status: 500 });
+  }
 }
