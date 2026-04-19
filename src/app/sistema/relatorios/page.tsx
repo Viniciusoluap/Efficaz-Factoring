@@ -21,6 +21,7 @@ type Dados = {
   titulos: any[];
   clientes: { id: string; nome: string }[];
   fornecedores: { id: string; nome: string }[];
+  config?: { aliquotaImposto: number } | null;
 };
 
 export default function RelatoriosPage() {
@@ -121,9 +122,12 @@ export default function RelatoriosPage() {
       doc.setTextColor(30, 30, 30);
       doc.text(`Resumo — ${periodoLabel}${espelho ? ' (Espelho Fiscal)' : ''}`, 14, 46);
 
+      const pdfRate = Number(dados.config?.aliquotaImposto ?? 35) / 100;
       const tp = dados.totaisPeriodo;
       const spreadBrutoPDF = Number(tp._sum?.spreadBruto ?? 0);
       const baseEspelhoPDF = Number(tp._sum?.baseEspelho ?? 0);
+      const impostoPDF = espelho ? baseEspelhoPDF * pdfRate : spreadBrutoPDF * pdfRate;
+      const spreadLiquidoPDF = spreadBrutoPDF - impostoPDF;
       autoTable(doc, {
         startY: 50,
         head: [['Indicador', 'Valor']],
@@ -131,15 +135,15 @@ export default function RelatoriosPage() {
           ['Títulos no período', String(tp._count?.id ?? 0)],
           ['Volume', formatarMoeda(Number(tp._sum?.valor ?? 0))],
           ['Base Espelho (0,5% a.m.)', formatarMoeda(baseEspelhoPDF)],
-          ['Imposto', formatarMoeda(Number(tp._sum?.impostoProvisao ?? 0))],
-          ['Spread Líquido', formatarMoeda(Number(tp._sum?.spreadLiquido ?? 0))],
+          [`Imposto (${(pdfRate * 100).toFixed(2)}%)`, formatarMoeda(impostoPDF)],
+          ['Spread Líquido', formatarMoeda(spreadLiquidoPDF)],
         ] : [
           ['Títulos no período', String(tp._count?.id ?? 0)],
           ['Volume', formatarMoeda(Number(tp._sum?.valor ?? 0))],
           ['Encargos', formatarMoeda(Number(tp._sum?.encargo ?? 0))],
           ['Spread Bruto', formatarMoeda(spreadBrutoPDF)],
-          ['Imposto', formatarMoeda(Number(tp._sum?.impostoProvisao ?? 0))],
-          ['Spread Líquido', formatarMoeda(Number(tp._sum?.spreadLiquido ?? 0))],
+          [`Imposto (${(pdfRate * 100).toFixed(2)}%)`, formatarMoeda(impostoPDF)],
+          ['Spread Líquido', formatarMoeda(spreadLiquidoPDF)],
         ],
         styles: { fontSize: 9 },
         headStyles: { fillColor: espelho ? [88, 28, 135] : [29, 78, 216] },
@@ -157,6 +161,8 @@ export default function RelatoriosPage() {
       const tg = dados.totaisGeral;
       const spreadBrutoGeralPDF = Number(tg._sum?.spreadBruto ?? 0);
       const baseEspelhoGeralPDF = Number(tg._sum?.baseEspelho ?? 0);
+      const impostoGeralPDF = espelho ? baseEspelhoGeralPDF * pdfRate : spreadBrutoGeralPDF * pdfRate;
+      const spreadLiquidoGeralPDF = spreadBrutoGeralPDF - impostoGeralPDF;
       autoTable(doc, {
         startY: yGeral + 4,
         head: [['Indicador', 'Valor']],
@@ -164,13 +170,14 @@ export default function RelatoriosPage() {
           ['Total de Títulos', String(tg._count?.id ?? 0)],
           ['Volume Total', formatarMoeda(Number(tg._sum?.valor ?? 0))],
           ['Base Espelho Total', formatarMoeda(baseEspelhoGeralPDF)],
-          ['Imposto Total', formatarMoeda(Number(tg._sum?.impostoProvisao ?? 0))],
-          ['Spread Líquido Total', formatarMoeda(Number(tg._sum?.spreadLiquido ?? 0))],
+          [`Imposto Total (${(pdfRate * 100).toFixed(2)}%)`, formatarMoeda(impostoGeralPDF)],
+          ['Spread Líquido Total', formatarMoeda(spreadLiquidoGeralPDF)],
         ] : [
           ['Total de Títulos', String(tg._count?.id ?? 0)],
           ['Volume Total', formatarMoeda(Number(tg._sum?.valor ?? 0))],
           ['Spread Bruto Total', formatarMoeda(spreadBrutoGeralPDF)],
-          ['Spread Líquido Total', formatarMoeda(Number(tg._sum?.spreadLiquido ?? 0))],
+          [`Imposto Total (${(pdfRate * 100).toFixed(2)}%)`, formatarMoeda(impostoGeralPDF)],
+          ['Spread Líquido Total', formatarMoeda(spreadLiquidoGeralPDF)],
         ],
         styles: { fontSize: 9 },
         headStyles: { fillColor: [88, 28, 135] },
@@ -338,22 +345,25 @@ export default function RelatoriosPage() {
           {/* Resumo geral */}
           <div className={`grid grid-cols-2 md:grid-cols-3 ${espelho ? 'lg:grid-cols-5' : 'lg:grid-cols-6'} gap-4`}>
             {(() => {
+              const rate = Number(dados.config?.aliquotaImposto ?? 35) / 100;
               const tp = dados.totaisPeriodo;
               const spreadBruto = Number(tp._sum?.spreadBruto ?? 0);
               const baseEsp = Number(tp._sum?.baseEspelho ?? 0);
+              const imposto = espelho ? baseEsp * rate : spreadBruto * rate;
+              const spreadLiquido = spreadBruto - imposto;
               const cards = espelho ? [
                 { label: 'Total de Títulos', value: String(tp._count?.id ?? 0), cor: 'text-gray-800' },
                 { label: 'Volume Total', value: formatarMoeda(Number(tp._sum?.valor ?? 0)), cor: 'text-blue-600' },
                 { label: 'Base Espelho (0,5%)', value: formatarMoeda(baseEsp), cor: 'text-purple-600' },
-                { label: 'Imposto', value: formatarMoeda(Number(tp._sum?.impostoProvisao ?? 0)), cor: 'text-red-600' },
-                { label: 'Spread Líquido', value: formatarMoeda(Number(tp._sum?.spreadLiquido ?? 0)), cor: 'text-green-700' },
+                { label: 'Imposto', value: formatarMoeda(imposto), cor: 'text-red-600' },
+                { label: 'Spread Líquido', value: formatarMoeda(spreadLiquido), cor: 'text-green-700' },
               ] : [
                 { label: 'Total de Títulos', value: String(tp._count?.id ?? 0), cor: 'text-gray-800' },
                 { label: 'Volume Total', value: formatarMoeda(Number(tp._sum?.valor ?? 0)), cor: 'text-blue-600' },
                 { label: 'Total Antecipado', value: formatarMoeda(Number(tp._sum?.valorLiquidoCliente ?? 0)), cor: 'text-green-600' },
                 { label: 'Encargos Totais', value: formatarMoeda(Number(tp._sum?.encargo ?? 0)), cor: 'text-amber-600' },
                 { label: 'Spread Bruto Total', value: formatarMoeda(spreadBruto), cor: 'text-purple-600' },
-                { label: 'Spread Líquido Total', value: formatarMoeda(Number(tp._sum?.spreadLiquido ?? 0)), cor: 'text-green-700' },
+                { label: 'Spread Líquido Total', value: formatarMoeda(spreadLiquido), cor: 'text-green-700' },
               ];
               return cards.map(({ label, value, cor }) => (
                 <div key={label} className={`rounded-2xl p-4 border shadow-sm ${espelho ? 'bg-purple-50 border-purple-100' : 'bg-white border-gray-100'}`}>
@@ -373,22 +383,26 @@ export default function RelatoriosPage() {
               </h3>
               <div className="space-y-3">
                 {(() => {
+                  const rate = Number(dados.config?.aliquotaImposto ?? 35) / 100;
                   const tp = dados.totaisPeriodo;
                   const spreadBruto = Number(tp._sum?.spreadBruto ?? 0);
                   const baseEspelho = Number(tp._sum?.baseEspelho ?? 0);
+                  const imposto = espelho ? baseEspelho * rate : spreadBruto * rate;
+                  const spreadLiquido = spreadBruto - imposto;
+                  const aliqLabel = `(${(rate * 100).toFixed(2)}%)`;
                   return espelho ? [
                     { label: 'Títulos', value: String(tp._count?.id ?? 0) },
                     { label: 'Volume', value: formatarMoeda(Number(tp._sum?.valor ?? 0)) },
                     { label: 'Base Espelho (0,5% a.m.)', value: formatarMoeda(baseEspelho) },
-                    { label: 'Imposto', value: formatarMoeda(Number(tp._sum?.impostoProvisao ?? 0)) },
-                    { label: 'Spread Líquido', value: formatarMoeda(Number(tp._sum?.spreadLiquido ?? 0)) },
+                    { label: `Imposto ${aliqLabel}`, value: formatarMoeda(imposto) },
+                    { label: 'Spread Líquido', value: formatarMoeda(spreadLiquido) },
                   ] : [
                     { label: 'Títulos', value: String(tp._count?.id ?? 0) },
                     { label: 'Volume', value: formatarMoeda(Number(tp._sum?.valor ?? 0)) },
                     { label: 'Total Antecipado', value: formatarMoeda(Number(tp._sum?.valorLiquidoCliente ?? 0)) },
                     { label: 'Spread Bruto', value: formatarMoeda(spreadBruto) },
-                    { label: 'Imposto', value: formatarMoeda(Number(tp._sum?.impostoProvisao ?? 0)) },
-                    { label: 'Spread Líquido', value: formatarMoeda(Number(tp._sum?.spreadLiquido ?? 0)) },
+                    { label: `Imposto ${aliqLabel}`, value: formatarMoeda(imposto) },
+                    { label: 'Spread Líquido', value: formatarMoeda(spreadLiquido) },
                   ];
                 })().map(({ label, value }) => (
                   <div key={label} className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0">

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getToken } from 'next-auth/jwt';
 import { prisma } from '@/lib/prisma';
 
 export async function GET() {
@@ -9,23 +8,28 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
+  const token = await getToken({ req });
+  if (!token) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
 
   try {
+    const body = await req.json();
     const {
       nomeEmpresa, cnpj, emailSistema,
       taxaMinimaFiscal, aliquotaImposto,
       aliquotaPIS, aliquotaCOFINS, aliquotaIRPJ,
       aliquotaCSLL, aliquotaISS, aliquotaIOF,
-    } = await req.json();
+    } = body;
 
-    const data = {
+    const baseData = {
       nomeEmpresa: nomeEmpresa || 'Efficaz Factoring',
       cnpj: cnpj || null,
       emailSistema: emailSistema || null,
       taxaMinimaFiscal: parseFloat(taxaMinimaFiscal) || 0.5,
       aliquotaImposto: parseFloat(aliquotaImposto) || 35,
+    };
+
+    const fullData = {
+      ...baseData,
       aliquotaPIS: parseFloat(aliquotaPIS) || 1.65,
       aliquotaCOFINS: parseFloat(aliquotaCOFINS) || 7.6,
       aliquotaIRPJ: parseFloat(aliquotaIRPJ) || 15,
@@ -34,11 +38,21 @@ export async function PUT(req: NextRequest) {
       aliquotaIOF: parseFloat(aliquotaIOF) || 0.38,
     };
 
-    const config = await prisma.configuracao.upsert({
-      where: { id: 'default' },
-      update: data,
-      create: { id: 'default', ...data },
-    });
+    let config;
+    try {
+      config = await prisma.configuracao.upsert({
+        where: { id: 'default' },
+        update: fullData,
+        create: { id: 'default', ...fullData },
+      });
+    } catch (prismaErr: any) {
+      // Fallback: DB migration may not have run yet for new tax columns
+      config = await prisma.configuracao.upsert({
+        where: { id: 'default' },
+        update: baseData,
+        create: { id: 'default', ...baseData },
+      });
+    }
 
     return NextResponse.json(config);
   } catch (err) {
