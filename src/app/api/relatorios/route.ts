@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
     }),
     prisma.titulo.findMany({
       where,
-      orderBy: { criadoEm: 'desc' },
+      orderBy: [{ dataVencimento: 'asc' }, { valor: 'asc' }],
       include: { cliente: { select: { nome: true } }, fornecedor: { select: { nome: true } } },
     }),
     prisma.cliente.findMany({ orderBy: { nome: 'asc' }, select: { id: true, nome: true } }),

@@ -9,7 +9,7 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
 
   const titulos = await prisma.titulo.findMany({
-    orderBy: { criadoEm: 'desc' },
+    orderBy: [{ dataVencimento: 'asc' }, { valor: 'asc' }],
     include: { cliente: true, fornecedor: true },
   });
   return NextResponse.json(titulos);

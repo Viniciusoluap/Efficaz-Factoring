@@ -29,7 +29,7 @@ const tipoCor: Record<TituloTipo, string> = {
 
 export default async function TitulosPage() {
   const titulos = await prisma.titulo.findMany({
-    orderBy: { criadoEm: 'desc' },
+    orderBy: [{ dataVencimento: 'asc' }, { valor: 'asc' }],
     include: { cliente: true, fornecedor: true },
   });
 
