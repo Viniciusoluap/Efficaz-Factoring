@@ -28,6 +28,11 @@ const navCliente = [
   { href: '/sistema/portal/configuracoes', label: 'Configurações', icon: Settings },
 ];
 
+const navFornecedor = [
+  { href: '/sistema/portal/fornecedor', label: 'Relatório', icon: TrendingUp },
+  { href: '/sistema/portal/configuracoes', label: 'Configurações', icon: Settings },
+];
+
 const perfilLabel: Record<string, string> = {
   ADMIN: 'Administrador', OPERADOR: 'Operador',
   CLIENTE: 'Cliente', FORNECEDOR: 'Fornecedor',
@@ -49,7 +54,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const { data: session } = useSession();
   const [collapsed, setCollapsed] = useState(false);
   const perfil = (session?.user as any)?.perfil ?? 'OPERADOR';
-  const navItems = perfil === 'CLIENTE' ? navCliente : navAdmin;
+  const navItems = perfil === 'CLIENTE' ? navCliente : perfil === 'FORNECEDOR' ? navFornecedor : navAdmin;
 
   const navContent = (
     <>

@@ -134,9 +134,9 @@ export default function RelatoriosPage() {
         body: espelho ? [
           ['Títulos no período', String(tp._count?.id ?? 0)],
           ['Volume', formatarMoeda(Number(tp._sum?.valor ?? 0))],
-          ['Base Espelho (0,5% a.m.)', formatarMoeda(baseEspelhoPDF)],
+          ['Spread Fiscal (0,5% a.m.)', formatarMoeda(baseEspelhoPDF)],
           [`Imposto (${(pdfRate * 100).toFixed(2)}%)`, formatarMoeda(impostoPDF)],
-          ['Spread Líquido', formatarMoeda(spreadLiquidoPDF)],
+          ['Spread Líquido Fiscal', formatarMoeda(spreadLiquidoPDF)],
         ] : [
           ['Títulos no período', String(tp._count?.id ?? 0)],
           ['Volume', formatarMoeda(Number(tp._sum?.valor ?? 0))],
@@ -169,9 +169,9 @@ export default function RelatoriosPage() {
         body: espelho ? [
           ['Total de Títulos', String(tg._count?.id ?? 0)],
           ['Volume Total', formatarMoeda(Number(tg._sum?.valor ?? 0))],
-          ['Base Espelho Total', formatarMoeda(baseEspelhoGeralPDF)],
+          ['Spread Fiscal Total', formatarMoeda(baseEspelhoGeralPDF)],
           [`Imposto Total (${(pdfRate * 100).toFixed(2)}%)`, formatarMoeda(impostoGeralPDF)],
-          ['Spread Líquido Total', formatarMoeda(spreadLiquidoGeralPDF)],
+          ['Spread Líquido Fiscal Total', formatarMoeda(spreadLiquidoGeralPDF)],
         ] : [
           ['Total de Títulos', String(tg._count?.id ?? 0)],
           ['Volume Total', formatarMoeda(Number(tg._sum?.valor ?? 0))],
@@ -196,7 +196,7 @@ export default function RelatoriosPage() {
 
         autoTable(doc, {
           startY: yTitulos + 4,
-          head: [['Nº', 'Tipo', 'Vencimento', 'Valor', espelho ? 'Base Espelho' : 'Encargo', 'Spread Líq.', 'Status']],
+          head: [['Nº', 'Tipo', 'Vencimento', 'Valor', espelho ? 'Spread Fiscal' : 'Encargo', espelho ? 'Spread Líq. Fiscal' : 'Spread Líq.', 'Status']],
           body: dados.titulos.map(t => [
             t.numero,
             t.tipo,
@@ -354,9 +354,9 @@ export default function RelatoriosPage() {
               const cards = espelho ? [
                 { label: 'Total de Títulos', value: String(tp._count?.id ?? 0), cor: 'text-gray-800' },
                 { label: 'Volume Total', value: formatarMoeda(Number(tp._sum?.valor ?? 0)), cor: 'text-blue-600' },
-                { label: 'Base Espelho (0,5%)', value: formatarMoeda(baseEsp), cor: 'text-purple-600' },
+                { label: 'Spread Fiscal (0,5%)', value: formatarMoeda(baseEsp), cor: 'text-purple-600' },
                 { label: 'Imposto', value: formatarMoeda(imposto), cor: 'text-red-600' },
-                { label: 'Spread Líquido', value: formatarMoeda(spreadLiquido), cor: 'text-green-700' },
+                { label: 'Spread Líquido Fiscal', value: formatarMoeda(spreadLiquido), cor: 'text-green-700' },
               ] : [
                 { label: 'Total de Títulos', value: String(tp._count?.id ?? 0), cor: 'text-gray-800' },
                 { label: 'Volume Total', value: formatarMoeda(Number(tp._sum?.valor ?? 0)), cor: 'text-blue-600' },
@@ -393,9 +393,9 @@ export default function RelatoriosPage() {
                   return espelho ? [
                     { label: 'Títulos', value: String(tp._count?.id ?? 0) },
                     { label: 'Volume', value: formatarMoeda(Number(tp._sum?.valor ?? 0)) },
-                    { label: 'Base Espelho (0,5% a.m.)', value: formatarMoeda(baseEspelho) },
+                    { label: 'Spread Fiscal (0,5% a.m.)', value: formatarMoeda(baseEspelho) },
                     { label: `Imposto ${aliqLabel}`, value: formatarMoeda(imposto) },
-                    { label: 'Spread Líquido', value: formatarMoeda(spreadLiquido) },
+                    { label: 'Spread Líquido Fiscal', value: formatarMoeda(spreadLiquido) },
                   ] : [
                     { label: 'Títulos', value: String(tp._count?.id ?? 0) },
                     { label: 'Volume', value: formatarMoeda(Number(tp._sum?.valor ?? 0)) },
@@ -456,7 +456,7 @@ export default function RelatoriosPage() {
                 <table className="w-full text-xs">
                   <thead>
                     <tr className={espelho ? 'bg-purple-50' : 'bg-gray-50'}>
-                      {['Número', 'Tipo', 'Cliente', 'Vencimento', 'Valor', espelho ? 'Base Espelho' : 'Encargo', 'Spread Líq.', 'Status', ''].map(h => (
+                      {['Número', 'Tipo', 'Cliente', 'Vencimento', 'Valor', espelho ? 'Spread Fiscal' : 'Encargo', espelho ? 'Spread Líq. Fiscal' : 'Spread Líq.', 'Status', ''].map(h => (
                         <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
                       ))}
                     </tr>

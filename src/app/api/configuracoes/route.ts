@@ -21,18 +21,19 @@ export async function PUT(req: NextRequest) {
       aliquotaCSLL, aliquotaISS, aliquotaIOF,
     } = body;
 
+    // baseData only includes columns guaranteed to exist in any schema version
     const baseData = {
       nomeEmpresa: nomeEmpresa || 'Efficaz Factoring',
       cnpj: cnpj || null,
       emailSistema: emailSistema || null,
-      telefone: telefone || null,
-      endereco: endereco || null,
       taxaMinimaFiscal: parseFloat(taxaMinimaFiscal) || 0.5,
       aliquotaImposto: parseFloat(aliquotaImposto) || 35,
     };
 
     const fullData = {
       ...baseData,
+      telefone: telefone || null,
+      endereco: endereco || null,
       aliquotaPIS: parseFloat(aliquotaPIS) || 1.65,
       aliquotaCOFINS: parseFloat(aliquotaCOFINS) || 7.6,
       aliquotaIRPJ: parseFloat(aliquotaIRPJ) || 15,

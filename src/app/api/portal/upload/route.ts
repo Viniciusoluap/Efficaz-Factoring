@@ -20,10 +20,14 @@ export async function POST(req: NextRequest) {
   const ext = file.name.split('.').pop() ?? 'bin';
   const filename = `${pasta}/${userId}/${Date.now()}.${ext}`;
 
-  const blob = await put(filename, file, {
-    access: 'public',
-    contentType: file.type,
-  });
-
-  return NextResponse.json({ url: blob.url });
+  try {
+    const blob = await put(filename, file, {
+      access: 'public',
+      contentType: file.type || 'application/octet-stream',
+    });
+    return NextResponse.json({ url: blob.url });
+  } catch (err: any) {
+    console.error('[upload/blob]', err);
+    return NextResponse.json({ error: err?.message ?? 'Falha ao salvar arquivo.' }, { status: 500 });
+  }
 }

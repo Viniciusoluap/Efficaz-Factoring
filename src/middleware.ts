@@ -19,7 +19,9 @@ export default withAuth(
     if (perfil === 'FORNECEDOR') {
       const allowed =
         pathname.startsWith('/sistema/portal/fornecedor') ||
-        pathname.startsWith('/api/portal/fornecedor');
+        pathname.startsWith('/sistema/portal/configuracoes') ||
+        pathname.startsWith('/api/portal/fornecedor') ||
+        pathname.startsWith('/api/portal/perfil');
       if (!allowed) {
         return NextResponse.redirect(new URL('/sistema/portal/fornecedor', req.url));
       }
