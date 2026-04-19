@@ -29,7 +29,15 @@ export type DadosTitulo = {
 
 const R = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-const EMPRESA = {
+export type EmpresaConfig = {
+  nomeEmpresa?: string;
+  cnpj?: string | null;
+  emailSistema?: string | null;
+  telefone?: string | null;
+  endereco?: string | null;
+};
+
+const EMPRESA_DEFAULT = {
   razaoSocial: 'EFFICAZ SERVIÇOS FINANCEIROS LTDA',
   fantasia: 'Efficaz Factoring',
   cnpj: '04.578.232/0001-82',
@@ -40,6 +48,16 @@ const EMPRESA = {
   telefone: '(99) 8139-2210',
   foro: 'Comarca de Imperatriz, Estado do Maranhão',
 };
+
+function buildEmpresa(cfg?: EmpresaConfig) {
+  const e = { ...EMPRESA_DEFAULT };
+  if (cfg?.nomeEmpresa) e.fantasia = cfg.nomeEmpresa;
+  if (cfg?.cnpj) e.cnpj = cfg.cnpj;
+  if (cfg?.emailSistema) e.email = cfg.emailSistema;
+  if (cfg?.telefone) e.telefone = cfg.telefone;
+  if (cfg?.endereco) e.endereco = cfg.endereco;
+  return e;
+}
 
 function addPage(doc: jsPDF, y: number, limite = 265): { doc: jsPDF; y: number; newPage: boolean } {
   if (y > limite) {
@@ -73,7 +91,8 @@ function paragrafo(doc: jsPDF, texto: string, y: number, L: number, W: number, s
   return y + linhas.length * (size * 0.42) + 3;
 }
 
-export async function gerarContratoPDF(dados: DadosTitulo) {
+export async function gerarContratoPDF(dados: DadosTitulo, empresaConfig?: EmpresaConfig) {
+  const EMPRESA = buildEmpresa(empresaConfig);
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const L = 18;
   const W = 174;
@@ -383,8 +402,9 @@ function buildContato(endereco?: string | null, telefone?: string | null, email?
   return parts.length ? `, ${parts.join(', ')}` : '';
 }
 
-export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: TituloOperacaoPDF[]) {
+export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: TituloOperacaoPDF[], empresaConfig?: EmpresaConfig) {
   if (!titulos.length) return;
+  const EMPRESA = buildEmpresa(empresaConfig);
 
   // Ordena por vencimento ASC, valor ASC
   const titulosOrdenados = [...titulos].sort((a, b) => {
@@ -655,8 +675,10 @@ export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: T
 export async function gerarContratoFornecedorPDF(
   operacao: OperacaoPDF,
   titulos: TituloFornecedorPDF[],
+  empresaConfig?: EmpresaConfig,
 ) {
   if (!titulos.length) return;
+  const EMPRESA = buildEmpresa(empresaConfig);
 
   // Ordena por vencimento ASC, valor ASC
   const titulosOrdenados = [...titulos].sort((a, b) => {

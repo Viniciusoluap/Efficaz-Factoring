@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Inbox, Phone, Mail, Building2, RefreshCw, Trash2, CheckCheck, Eye, MessageSquare, Clock, Users, FileText, ImageIcon, ChevronDown } from 'lucide-react';
+import { Inbox, Phone, Mail, RefreshCw, Trash2, CheckCheck, Eye, MessageSquare, Clock, Users, FileText, ImageIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -65,8 +65,10 @@ export default function SolicitacoesPage() {
   const [loadingClientes, setLoadingClientes] = useState(true);
   const [selecionadaCliente, setSelecionadaCliente] = useState<SolicitacaoCliente | null>(null);
   const [salvandoResposta, setSalvandoResposta] = useState(false);
+  const [respostaStatus, setRespostaStatus] = useState<'idle' | 'ok' | 'erro'>('idle');
   const [novoStatus, setNovoStatus] = useState('');
   const [novaObservacao, setNovaObservacao] = useState('');
+  const [confirmDeleteCliente, setConfirmDeleteCliente] = useState<string | null>(null);
 
   const carregarAvulsas = () => {
     setLoadingAvulsas(true);
@@ -116,18 +118,32 @@ export default function SolicitacoesPage() {
 
   const salvarRespostaCliente = async () => {
     if (!selecionadaCliente) return;
-    setSalvandoResposta(true);
-    await fetch(`/api/solicitacoes-clientes/${selecionadaCliente.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: novoStatus, observacaoAdmin: novaObservacao }),
-    });
-    setClienteSols(prev => prev.map(s => s.id === selecionadaCliente.id
-      ? { ...s, status: novoStatus, observacaoAdmin: novaObservacao }
-      : s
-    ));
-    setSelecionadaCliente(prev => prev ? { ...prev, status: novoStatus, observacaoAdmin: novaObservacao } : null);
-    setSalvandoResposta(false);
+    setSalvandoResposta(true); setRespostaStatus('idle');
+    try {
+      const res = await fetch(`/api/solicitacoes-clientes/${selecionadaCliente.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: novoStatus, observacaoAdmin: novaObservacao }),
+      });
+      if (!res.ok) throw new Error('Falha');
+      setClienteSols(prev => prev.map(s => s.id === selecionadaCliente.id
+        ? { ...s, status: novoStatus, observacaoAdmin: novaObservacao } : s
+      ));
+      setSelecionadaCliente(prev => prev ? { ...prev, status: novoStatus, observacaoAdmin: novaObservacao } : null);
+      setRespostaStatus('ok');
+      setTimeout(() => setRespostaStatus('idle'), 3000);
+    } catch {
+      setRespostaStatus('erro');
+    } finally {
+      setSalvandoResposta(false);
+    }
+  };
+
+  const excluirClienteSol = async (id: string) => {
+    await fetch(`/api/solicitacoes-clientes/${id}`, { method: 'DELETE' });
+    setClienteSols(prev => prev.filter(s => s.id !== id));
+    if (selecionadaCliente?.id === id) setSelecionadaCliente(null);
+    setConfirmDeleteCliente(null);
   };
 
   const naoLidas = avulsas.filter(s => !s.lida).length;
@@ -339,6 +355,25 @@ export default function SolicitacoesPage() {
                           </span>
                         )}
                       </div>
+                      <div className="mt-2 flex gap-1.5" onClick={e => e.stopPropagation()}>
+                        {confirmDeleteCliente === s.id ? (
+                          <>
+                            <button onClick={() => excluirClienteSol(s.id)}
+                              className="flex-1 text-xs font-semibold bg-red-600 hover:bg-red-700 text-white px-2 py-1.5 rounded-lg transition-colors">
+                              Confirmar exclusão
+                            </button>
+                            <button onClick={() => setConfirmDeleteCliente(null)}
+                              className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1.5 rounded-lg font-medium">
+                              Cancelar
+                            </button>
+                          </>
+                        ) : (
+                          <button onClick={() => setConfirmDeleteCliente(s.id)}
+                            className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1.5 rounded-lg transition-colors">
+                            <Trash2 className="w-3 h-3" /> Excluir
+                          </button>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -425,10 +460,18 @@ export default function SolicitacoesPage() {
                           className={`${inputCls} resize-none`}
                           placeholder="Ex: Recebemos sua solicitação e entraremos em contato em breve." />
                       </div>
-                      <button onClick={salvarRespostaCliente} disabled={salvandoResposta}
-                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors disabled:opacity-60">
-                        {salvandoResposta ? 'Salvando...' : 'Salvar Resposta'}
-                      </button>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <button onClick={salvarRespostaCliente} disabled={salvandoResposta}
+                          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors disabled:opacity-60">
+                          {salvandoResposta ? 'Salvando...' : 'Salvar Resposta'}
+                        </button>
+                        {respostaStatus === 'ok' && (
+                          <span className="text-xs text-green-600 font-medium">Salvo com sucesso!</span>
+                        )}
+                        {respostaStatus === 'erro' && (
+                          <span className="text-xs text-red-600 font-medium">Erro ao salvar.</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ) : (

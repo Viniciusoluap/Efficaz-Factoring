@@ -236,6 +236,8 @@ model Configuracao {
   nomeEmpresa      String   @default("Efficaz Factoring")
   cnpj             String?
   emailSistema     String?
+  telefone         String?
+  endereco         String?
   whatsappApiKey   String?
   atualizadoEm     DateTime @updatedAt
 

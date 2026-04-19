@@ -15,7 +15,7 @@ export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
     const {
-      nomeEmpresa, cnpj, emailSistema,
+      nomeEmpresa, cnpj, emailSistema, telefone, endereco,
       taxaMinimaFiscal, aliquotaImposto,
       aliquotaPIS, aliquotaCOFINS, aliquotaIRPJ,
       aliquotaCSLL, aliquotaISS, aliquotaIOF,
@@ -25,6 +25,8 @@ export async function PUT(req: NextRequest) {
       nomeEmpresa: nomeEmpresa || 'Efficaz Factoring',
       cnpj: cnpj || null,
       emailSistema: emailSistema || null,
+      telefone: telefone || null,
+      endereco: endereco || null,
       taxaMinimaFiscal: parseFloat(taxaMinimaFiscal) || 0.5,
       aliquotaImposto: parseFloat(aliquotaImposto) || 35,
     };
