@@ -46,8 +46,13 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
     taxaFornecedor: Number(operacao.taxaFornecedor),
     clienteNome: operacao.cliente?.nome,
     clienteCpfCnpj: operacao.cliente?.cpfCnpj,
+    clienteEmail: operacao.cliente?.email,
+    clienteTelefone: operacao.cliente?.telefone ?? undefined,
+    clienteEndereco: operacao.cliente?.endereco ?? undefined,
     fornecedorNome: operacao.fornecedor?.nome,
     fornecedorCpfCnpj: operacao.fornecedor?.cpfCnpj,
+    fornecedorEmail: operacao.fornecedor?.email,
+    fornecedorTelefone: operacao.fornecedor?.telefone ?? undefined,
     criadoEm: format(new Date(operacao.criadoEm), "dd/MM/yyyy 'às' HH:mm"),
   };
 
@@ -185,7 +190,7 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
           { label: 'Total Encargos', value: formatarMoeda(totais.encargo), cor: 'text-amber-600' },
           { label: 'Líquido Cliente', value: formatarMoeda(totais.liquidoCliente), cor: 'text-blue-600' },
           { label: 'Spread Bruto', value: formatarMoeda(totais.spreadBruto), cor: 'text-purple-600' },
-          { label: 'Imposto Prov.', value: formatarMoeda(totais.imposto), cor: 'text-red-500' },
+          { label: 'Imposto', value: formatarMoeda(totais.imposto), cor: 'text-red-500' },
           { label: 'Spread Líquido', value: formatarMoeda(totais.spreadLiquido), cor: 'text-green-600' },
         ].map(({ label, value, cor }) => (
           <div key={label} className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">

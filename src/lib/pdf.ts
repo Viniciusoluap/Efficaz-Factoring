@@ -20,6 +20,9 @@ export type DadosTitulo = {
   spreadLiquido: number;
   impostoProvisao: number;
   clienteNome?: string;
+  clienteEmail?: string;
+  clienteTelefone?: string;
+  clienteEndereco?: string;
   fornecedorNome?: string;
   criadoEm: string;
 };
@@ -115,7 +118,7 @@ export async function gerarContratoPDF(dados: DadosTitulo) {
     `CESSIONÁRIA: ${EMPRESA.razaoSocial}, pessoa jurídica de direito privado, inscrita no CNPJ/MF sob o nº ${EMPRESA.cnpj}, com sede na ${EMPRESA.endereco}, ${EMPRESA.cidade}, ${EMPRESA.cep}, doravante denominada simplesmente "CESSIONÁRIA".`,
     y, L, W);
   y = paragrafo(doc,
-    `CEDENTE: ${dados.emitenteNome}, inscrito(a) no CPF/CNPJ sob o nº ${formatarCpfCnpj(dados.emitenteCpfCnpj)}, doravante denominado(a) simplesmente "CEDENTE".`,
+    `CEDENTE: ${dados.clienteNome ?? dados.emitenteNome}, inscrito(a) no CPF/CNPJ sob o nº ${formatarCpfCnpj(dados.emitenteCpfCnpj)}${buildContato(dados.clienteEndereco, dados.clienteTelefone, dados.clienteEmail)}, doravante denominado(a) simplesmente "CEDENTE".`,
     y, L, W);
   y = paragrafo(doc,
     `DEVEDOR / SACADO: ${dados.sacadoNome}, inscrito(a) no CPF/CNPJ sob o nº ${formatarCpfCnpj(dados.sacadoCpfCnpj)}, doravante denominado(a) simplesmente "DEVEDOR".`,
@@ -339,8 +342,13 @@ export type OperacaoPDF = {
   taxaFornecedor: number;
   clienteNome?: string;
   clienteCpfCnpj?: string;
+  clienteEmail?: string;
+  clienteTelefone?: string;
+  clienteEndereco?: string;
   fornecedorNome?: string;
   fornecedorCpfCnpj?: string;
+  fornecedorEmail?: string;
+  fornecedorTelefone?: string;
   criadoEm: string; // dd/MM/yyyy HH:mm
 };
 
@@ -365,6 +373,14 @@ function dataAtualPorExtenso(): string {
 function parseDateStr(s: string): number {
   const [d, m, y] = s.split('/').map(Number);
   return new Date(y, m - 1, d).getTime();
+}
+
+function buildContato(endereco?: string | null, telefone?: string | null, email?: string | null): string {
+  const parts: string[] = [];
+  if (endereco) parts.push(`endereço: ${endereco}`);
+  if (telefone) parts.push(`telefone: ${telefone}`);
+  if (email) parts.push(`e-mail: ${email}`);
+  return parts.length ? `, ${parts.join(', ')}` : '';
 }
 
 export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: TituloOperacaoPDF[]) {
@@ -428,7 +444,7 @@ export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: T
     `CESSIONÁRIA: ${EMPRESA.razaoSocial}, pessoa jurídica de direito privado, inscrita no CNPJ/MF sob o nº ${EMPRESA.cnpj}, com sede na ${EMPRESA.endereco}, ${EMPRESA.cidade}, ${EMPRESA.cep}, doravante denominada simplesmente "CESSIONÁRIA".`,
     y, L, W);
   y = paragrafo(doc,
-    `CEDENTE: ${operacao.clienteNome ?? t0.emitenteNome}, inscrito(a) no CPF/CNPJ sob o nº ${formatarCpfCnpj(operacao.clienteCpfCnpj ?? t0.emitenteCpfCnpj)}, doravante denominado(a) simplesmente "CEDENTE".`,
+    `CEDENTE: ${operacao.clienteNome ?? t0.emitenteNome}, inscrito(a) no CPF/CNPJ sob o nº ${formatarCpfCnpj(operacao.clienteCpfCnpj ?? t0.emitenteCpfCnpj)}${buildContato(operacao.clienteEndereco, operacao.clienteTelefone, operacao.clienteEmail)}, doravante denominado(a) simplesmente "CEDENTE".`,
     y, L, W);
   if (titulosOrdenados.some(t => t.sacadoNome !== t0.sacadoNome)) {
     y = paragrafo(doc,
@@ -696,12 +712,12 @@ export async function gerarContratoFornecedorPDF(
 
   // CESSIONÁRIO = Fornecedor
   y = paragrafo(doc,
-    `CESSIONÁRIO: ${operacao.fornecedorNome ?? '—'}, inscrito(a) no CPF/CNPJ sob o nº ${formatarCpfCnpj(operacao.fornecedorCpfCnpj ?? '—')}, doravante denominado(a) simplesmente "CESSIONÁRIO".`,
+    `CESSIONÁRIO: ${operacao.fornecedorNome ?? '—'}, inscrito(a) no CPF/CNPJ sob o nº ${formatarCpfCnpj(operacao.fornecedorCpfCnpj ?? '—')}${buildContato(undefined, operacao.fornecedorTelefone, operacao.fornecedorEmail)}, doravante denominado(a) simplesmente "CESSIONÁRIO".`,
     y, L, W);
 
   // CEDENTE = Cliente custodiante
   y = paragrafo(doc,
-    `CEDENTE: ${operacao.clienteNome ?? '—'}, inscrito(a) no CPF/CNPJ sob o nº ${formatarCpfCnpj(operacao.clienteCpfCnpj ?? '—')}, doravante denominado(a) simplesmente "CEDENTE".`,
+    `CEDENTE: ${operacao.clienteNome ?? '—'}, inscrito(a) no CPF/CNPJ sob o nº ${formatarCpfCnpj(operacao.clienteCpfCnpj ?? '—')}${buildContato(operacao.clienteEndereco, operacao.clienteTelefone, operacao.clienteEmail)}, doravante denominado(a) simplesmente "CEDENTE".`,
     y, L, W);
 
   // INTERMEDIÁRIA = Efficaz
