@@ -159,6 +159,7 @@ model Titulo {
 
   contrato     Contrato?
   comunicacoes Comunicacao[]
+  prorrogacoes Prorrogacao[]
 
   @@map("titulos")
 }
@@ -223,6 +224,19 @@ model Solicitacao {
   criadoEm  DateTime @default(now())
 
   @@map("solicitacoes")
+}
+
+model Prorrogacao {
+  id                  String   @id @default(cuid())
+  tituloId            String
+  titulo              Titulo   @relation(fields: [tituloId], references: [id], onDelete: Cascade)
+  dataVencAnterior    DateTime
+  dataVencNova        DateTime
+  taxaCliente         Decimal  @db.Decimal(8, 4)
+  encargoProrrogacao  Decimal  @db.Decimal(15, 2)
+  criadoEm            DateTime @default(now())
+
+  @@map("prorrogacoes")
 }
 
 model Configuracao {

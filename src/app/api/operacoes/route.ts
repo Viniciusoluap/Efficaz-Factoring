@@ -31,7 +31,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Campos obrigatórios ausentes.' }, { status: 400 });
     }
 
-    const config = await prisma.configuracao.findUnique({ where: { id: 'default' } });
+    let config: any = null;
+    try { config = await prisma.configuracao.findUnique({ where: { id: 'default' } }); } catch {}
 
     const criarTituloData = async (tx: any, opId: string, t: any) => {
       const resultado = calcularOperacao({

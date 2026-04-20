@@ -101,12 +101,17 @@ export default function NovoTituloPage() {
       .catch(() => {});
   }, [operacaoId]);
 
-  const getSugestoes = (lista: Parte[], texto: string): Parte[] => {
+  const mergePartes = (fromDB: Parte[], fromForm: Parte[]): Parte[] => {
+    const map = new Map<string, Parte>();
+    [...fromDB, ...fromForm].forEach(p => { if (p.cpfCnpj) map.set(p.cpfCnpj, p); });
+    return Array.from(map.values()).sort((a, b) => a.nome.localeCompare(b.nome));
+  };
+
+  const getSugestoes = (fromDB: Parte[], fromForm: Parte[], texto: string): Parte[] => {
+    const lista = mergePartes(fromDB, fromForm);
     if (!texto || texto.length < 1) return lista.slice(0, 6);
     const lower = texto.toLowerCase();
-    return lista.filter(p =>
-      p.cpfCnpj.includes(texto) || p.nome.toLowerCase().includes(lower)
-    ).slice(0, 6);
+    return lista.filter(p => p.cpfCnpj.includes(texto) || p.nome.toLowerCase().includes(lower)).slice(0, 6);
   };
 
   const selecionarEmitente = (id: string, p: Parte) => {
@@ -448,9 +453,9 @@ export default function NovoTituloPage() {
                             onBlur={() => setTimeout(() => setSugestaoAberta(null), 150)}
                             placeholder="000.000.000-00"
                           />
-                          {sugestaoAberta === `${t.id}_ec` && getSugestoes(partesEmitentes, t.emitenteCpfCnpj).length > 0 && (
+                          {sugestaoAberta === `${t.id}_ec` && getSugestoes(partesEmitentes, titulos.filter(o => o.id !== t.id && o.emitenteCpfCnpj).map(o => ({ cpfCnpj: o.emitenteCpfCnpj, nome: o.emitenteNome })), t.emitenteCpfCnpj).length > 0 && (
                             <ul className="absolute z-50 left-0 right-0 top-full mt-0.5 bg-white border border-gray-200 rounded-xl shadow-lg max-h-44 overflow-y-auto">
-                              {getSugestoes(partesEmitentes, t.emitenteCpfCnpj).map(p => (
+                              {getSugestoes(partesEmitentes, titulos.filter(o => o.id !== t.id && o.emitenteCpfCnpj).map(o => ({ cpfCnpj: o.emitenteCpfCnpj, nome: o.emitenteNome })), t.emitenteCpfCnpj).map(p => (
                                 <li key={p.cpfCnpj}>
                                   <button type="button" className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors"
                                     onMouseDown={() => selecionarEmitente(t.id, p)}>
@@ -472,9 +477,9 @@ export default function NovoTituloPage() {
                             onBlur={() => setTimeout(() => setSugestaoAberta(null), 150)}
                             placeholder="Nome completo"
                           />
-                          {sugestaoAberta === `${t.id}_en` && getSugestoes(partesEmitentes, t.emitenteNome).length > 0 && (
+                          {sugestaoAberta === `${t.id}_en` && getSugestoes(partesEmitentes, titulos.filter(o => o.id !== t.id && o.emitenteCpfCnpj).map(o => ({ cpfCnpj: o.emitenteCpfCnpj, nome: o.emitenteNome })), t.emitenteNome).length > 0 && (
                             <ul className="absolute z-50 left-0 right-0 top-full mt-0.5 bg-white border border-gray-200 rounded-xl shadow-lg max-h-44 overflow-y-auto">
-                              {getSugestoes(partesEmitentes, t.emitenteNome).map(p => (
+                              {getSugestoes(partesEmitentes, titulos.filter(o => o.id !== t.id && o.emitenteCpfCnpj).map(o => ({ cpfCnpj: o.emitenteCpfCnpj, nome: o.emitenteNome })), t.emitenteNome).map(p => (
                                 <li key={p.cpfCnpj}>
                                   <button type="button" className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors"
                                     onMouseDown={() => selecionarEmitente(t.id, p)}>
@@ -526,9 +531,9 @@ export default function NovoTituloPage() {
                             onBlur={() => setTimeout(() => setSugestaoAberta(null), 150)}
                             placeholder="000.000.000-00"
                           />
-                          {sugestaoAberta === `${t.id}_sc` && getSugestoes(partesSacados, t.sacadoCpfCnpj).length > 0 && (
+                          {sugestaoAberta === `${t.id}_sc` && getSugestoes(partesSacados, titulos.filter(o => o.id !== t.id && o.sacadoCpfCnpj).map(o => ({ cpfCnpj: o.sacadoCpfCnpj, nome: o.sacadoNome })), t.sacadoCpfCnpj).length > 0 && (
                             <ul className="absolute z-50 left-0 right-0 top-full mt-0.5 bg-white border border-gray-200 rounded-xl shadow-lg max-h-44 overflow-y-auto">
-                              {getSugestoes(partesSacados, t.sacadoCpfCnpj).map(p => (
+                              {getSugestoes(partesSacados, titulos.filter(o => o.id !== t.id && o.sacadoCpfCnpj).map(o => ({ cpfCnpj: o.sacadoCpfCnpj, nome: o.sacadoNome })), t.sacadoCpfCnpj).map(p => (
                                 <li key={p.cpfCnpj}>
                                   <button type="button" className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors"
                                     onMouseDown={() => selecionarSacado(t.id, p)}>
@@ -550,9 +555,9 @@ export default function NovoTituloPage() {
                             onBlur={() => setTimeout(() => setSugestaoAberta(null), 150)}
                             placeholder="Nome completo"
                           />
-                          {sugestaoAberta === `${t.id}_sn` && getSugestoes(partesSacados, t.sacadoNome).length > 0 && (
+                          {sugestaoAberta === `${t.id}_sn` && getSugestoes(partesSacados, titulos.filter(o => o.id !== t.id && o.sacadoCpfCnpj).map(o => ({ cpfCnpj: o.sacadoCpfCnpj, nome: o.sacadoNome })), t.sacadoNome).length > 0 && (
                             <ul className="absolute z-50 left-0 right-0 top-full mt-0.5 bg-white border border-gray-200 rounded-xl shadow-lg max-h-44 overflow-y-auto">
-                              {getSugestoes(partesSacados, t.sacadoNome).map(p => (
+                              {getSugestoes(partesSacados, titulos.filter(o => o.id !== t.id && o.sacadoCpfCnpj).map(o => ({ cpfCnpj: o.sacadoCpfCnpj, nome: o.sacadoNome })), t.sacadoNome).map(p => (
                                 <li key={p.cpfCnpj}>
                                   <button type="button" className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors"
                                     onMouseDown={() => selecionarSacado(t.id, p)}>

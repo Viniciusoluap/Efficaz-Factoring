@@ -6,8 +6,8 @@ export const runtime = 'nodejs';
 
 export async function GET() {
   try {
-    const config = await prisma.configuracao.findUnique({ where: { id: 'default' } });
-    return NextResponse.json(config);
+    const rows = await prisma.$queryRaw<any[]>`SELECT * FROM configuracoes WHERE id = 'default'`;
+    return NextResponse.json(rows[0] ?? null);
   } catch {
     return NextResponse.json(null);
   }
@@ -71,7 +71,11 @@ export async function PUT(req: NextRequest) {
       `;
     } catch { /* columns not yet migrated in this environment */ }
 
-    const saved = await prisma.configuracao.findUnique({ where: { id: 'default' } });
+    let saved = null;
+    try {
+      const rows = await prisma.$queryRaw<any[]>`SELECT * FROM configuracoes WHERE id = 'default'`;
+      saved = rows[0] ?? null;
+    } catch {}
     return NextResponse.json(saved ?? { id: 'default', taxaMinimaFiscal: tMF, aliquotaImposto: tAI });
   } catch (err) {
     console.error('[PUT /api/configuracoes]', err);
