@@ -203,7 +203,7 @@ export default function RelatoriosPage() {
             format(new Date(t.dataVencimento), 'dd/MM/yyyy'),
             formatarMoeda(Number(t.valor)),
             espelho ? formatarMoeda(Number(t.baseEspelho ?? 0)) : formatarMoeda(Number(t.encargo)),
-            formatarMoeda(Number(t.spreadLiquido ?? 0)),
+            espelho ? formatarMoeda(Number(t.baseEspelho ?? 0) * (1 - pdfRate)) : formatarMoeda(Number(t.spreadLiquido ?? 0)),
             t.status === 'LIQUIDADO' ? 'Pago' : t.status === 'VENCIDO' ? 'Vencido' : 'Pendente',
           ]),
           styles: { fontSize: 7.5, cellPadding: 2 },
@@ -472,7 +472,12 @@ export default function RelatoriosPage() {
                         <td className={`px-3 py-2.5 ${espelho ? 'text-purple-600' : 'text-amber-600'}`}>
                           {espelho ? formatarMoeda(Number(t.baseEspelho ?? 0)) : formatarMoeda(Number(t.encargo))}
                         </td>
-                        <td className="px-3 py-2.5 text-green-600 font-semibold">{formatarMoeda(Number(t.spreadLiquido ?? 0))}</td>
+                        <td className="px-3 py-2.5 text-green-600 font-semibold">
+                          {espelho
+                            ? formatarMoeda(Number(t.baseEspelho ?? 0) * (1 - Number(dados.config?.aliquotaImposto ?? 35) / 100))
+                            : formatarMoeda(Number(t.spreadLiquido ?? 0))
+                          }
+                        </td>
                         <td className="px-3 py-2.5">
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                             t.status === 'APROVADO' ? 'bg-green-100 text-green-700' :
