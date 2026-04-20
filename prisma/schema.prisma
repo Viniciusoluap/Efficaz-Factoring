@@ -73,11 +73,13 @@ model Cliente {
   nome      String
   cpfCnpj   String   @unique
   email     String
-  telefone  String?
-  endereco  String?
-  ativo     Boolean  @default(true)
-  criadoEm  DateTime @default(now())
-  atualizadoEm DateTime @updatedAt
+  telefone          String?
+  endereco          String?
+  representanteNome String?
+  representanteCpf  String?
+  ativo             Boolean  @default(true)
+  criadoEm          DateTime @default(now())
+  atualizadoEm      DateTime @updatedAt
 
   titulos       Titulo[]
   operacoes     Operacao[]

@@ -23,6 +23,8 @@ export type DadosTitulo = {
   clienteEmail?: string;
   clienteTelefone?: string;
   clienteEndereco?: string;
+  clienteRepresentanteNome?: string;
+  clienteRepresentanteCpf?: string;
   fornecedorNome?: string;
   criadoEm: string;
 };
@@ -142,6 +144,11 @@ export async function gerarContratoPDF(dados: DadosTitulo, empresaConfig?: Empre
   y = paragrafo(doc,
     `DEVEDOR / SACADO: ${dados.sacadoNome}, inscrito(a) no CPF/CNPJ sob o nº ${formatarCpfCnpj(dados.sacadoCpfCnpj)}, doravante denominado(a) simplesmente "DEVEDOR".`,
     y, L, W);
+  if (dados.clienteRepresentanteNome && dados.clienteRepresentanteCpf) {
+    y = paragrafo(doc,
+      `AVALISTA: ${dados.clienteRepresentanteNome}, inscrito(a) no CPF sob o nº ${formatarCpfCnpj(dados.clienteRepresentanteCpf)}, representante legal do CEDENTE, doravante denominado(a) simplesmente "AVALISTA".`,
+      y, L, W);
+  }
 
   // ── CLÁUSULA 1ª ─────────────────────────────────────────────────
   y = secao(doc, 'CLÁUSULA PRIMEIRA – DO OBJETO E DA NATUREZA JURÍDICA', y, L);
@@ -213,6 +220,11 @@ export async function gerarContratoPDF(dados: DadosTitulo, empresaConfig?: Empre
   y = paragrafo(doc,
     '4.2. Nas hipóteses do item 4.1, o CEDENTE obriga-se a restituir à CESSIONÁRIA o valor integral pago (item 2.2), acrescido de multa de 10% (dez por cento), juros de mora de 1% (um por cento) ao mês e correção monetária pelo IPCA, a contar da data do pagamento, nos termos dos arts. 394 a 396 e 408 do Código Civil.',
     y, L, W);
+  if (dados.clienteRepresentanteNome && dados.clienteRepresentanteCpf) {
+    y = paragrafo(doc,
+      `4.3. O AVALISTA ${dados.clienteRepresentanteNome}, CPF ${formatarCpfCnpj(dados.clienteRepresentanteCpf)}, responsabiliza-se solidariamente e como principal pagador por todas as obrigações do CEDENTE decorrentes deste contrato, renunciando expressamente ao benefício de ordem previsto no art. 827 do Código Civil, respondendo com seus bens presentes e futuros em caso de inadimplemento do CEDENTE.`,
+      y, L, W);
+  }
 
   // ── CLÁUSULA 5ª ─────────────────────────────────────────────────
   y = secao(doc, 'CLÁUSULA QUINTA – DO INADIMPLEMENTO DO DEVEDOR', y, L);
@@ -303,7 +315,25 @@ export async function gerarContratoPDF(dados: DadosTitulo, empresaConfig?: Empre
   doc.text('CEDENTE', 112, y);
   y += 16;
 
+  // Bloco AVALISTA (se aplicável)
+  if (dados.clienteRepresentanteNome && dados.clienteRepresentanteCpf) {
+    const av = addPage(doc, y + 20);
+    y = av.y;
+    doc.line(L, y, L + 78, y);
+    y += 6;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(15, 23, 42);
+    doc.text(dados.clienteRepresentanteNome, L, y, { maxWidth: 78 });
+    y += 5;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(110, 110, 130);
+    doc.text(`CPF: ${formatarCpfCnpj(dados.clienteRepresentanteCpf)}`, L, y);
+    y += 5;
+    doc.text('AVALISTA / REPRESENTANTE LEGAL', L, y);
+    y += 16;
+  }
+
   // Testemunhas
+  const av2 = addPage(doc, y + 20);
+  y = av2.y;
   doc.setTextColor(100, 100, 120);
   doc.setFontSize(7.5);
   doc.text('Testemunha 1:', L, y);
@@ -364,6 +394,8 @@ export type OperacaoPDF = {
   clienteEmail?: string;
   clienteTelefone?: string;
   clienteEndereco?: string;
+  clienteRepresentanteNome?: string;
+  clienteRepresentanteCpf?: string;
   fornecedorNome?: string;
   fornecedorCpfCnpj?: string;
   fornecedorEmail?: string;
@@ -475,6 +507,11 @@ export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: T
       `DEVEDOR / SACADO: ${t0.sacadoNome}, inscrito(a) no CPF/CNPJ sob o nº ${formatarCpfCnpj(t0.sacadoCpfCnpj)}, doravante denominado(a) simplesmente "DEVEDOR".`,
       y, L, W);
   }
+  if (operacao.clienteRepresentanteNome && operacao.clienteRepresentanteCpf) {
+    y = paragrafo(doc,
+      `AVALISTA: ${operacao.clienteRepresentanteNome}, inscrito(a) no CPF sob o nº ${formatarCpfCnpj(operacao.clienteRepresentanteCpf)}, representante legal do CEDENTE, doravante denominado(a) simplesmente "AVALISTA".`,
+      y, L, W);
+  }
   if (operacao.clienteNome) {
     y = paragrafo(doc, `CLIENTE CUSTODIANTE: ${operacao.clienteNome}.`, y, L, W);
   }
@@ -567,6 +604,11 @@ export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: T
   y = paragrafo(doc,
     `4.2. Nas hipóteses do item 4.1, o CEDENTE obriga-se a restituir à CESSIONÁRIA o valor integral pago, acrescido de multa de 10% (dez por cento), juros de mora de 1% (um por cento) ao mês e correção monetária pelo IPCA, a contar da data do pagamento.`,
     y, L, W);
+  if (operacao.clienteRepresentanteNome && operacao.clienteRepresentanteCpf) {
+    y = paragrafo(doc,
+      `4.3. O AVALISTA ${operacao.clienteRepresentanteNome}, CPF ${formatarCpfCnpj(operacao.clienteRepresentanteCpf)}, responsabiliza-se solidariamente e como principal pagador por todas as obrigações do CEDENTE decorrentes deste contrato, renunciando expressamente ao benefício de ordem previsto no art. 827 do Código Civil, respondendo com seus bens presentes e futuros em caso de inadimplemento do CEDENTE.`,
+      y, L, W);
+  }
 
   // ── CLÁUSULA 5ª ─────────────────────────────────────────────────
   y = secao(doc, 'CLÁUSULA QUINTA – DO INADIMPLEMENTO DOS DEVEDORES', y, L);
@@ -634,6 +676,22 @@ export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: T
   doc.text('CESSIONÁRIA', L, y);
   doc.text('CEDENTE', 112, y);
   y += 16;
+
+  // Bloco AVALISTA — contrato de operação
+  if (operacao.clienteRepresentanteNome && operacao.clienteRepresentanteCpf) {
+    const avOp = addPage(doc, y + 20);
+    y = avOp.y;
+    doc.line(L, y, L + 78, y);
+    y += 6;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(15, 23, 42);
+    doc.text(operacao.clienteRepresentanteNome, L, y, { maxWidth: 78 });
+    y += 5;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(110, 110, 130);
+    doc.text(`CPF: ${formatarCpfCnpj(operacao.clienteRepresentanteCpf)}`, L, y);
+    y += 5;
+    doc.text('AVALISTA / REPRESENTANTE LEGAL', L, y);
+    y += 16;
+  }
 
   doc.setTextColor(100, 100, 120);
   doc.setFontSize(7.5);

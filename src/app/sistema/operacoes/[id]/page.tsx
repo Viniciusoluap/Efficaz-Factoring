@@ -49,6 +49,8 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
     clienteEmail: operacao.cliente?.email,
     clienteTelefone: operacao.cliente?.telefone ?? undefined,
     clienteEndereco: operacao.cliente?.endereco ?? undefined,
+    clienteRepresentanteNome: operacao.cliente?.representanteNome ?? undefined,
+    clienteRepresentanteCpf: operacao.cliente?.representanteCpf ?? undefined,
     fornecedorNome: operacao.fornecedor?.nome,
     fornecedorCpfCnpj: operacao.fornecedor?.cpfCnpj,
     fornecedorEmail: operacao.fornecedor?.email,

@@ -11,10 +11,11 @@ export default function NovoClientePage() {
   const [erro, setErro] = useState('');
   const [form, setForm] = useState({
     nome: '', cpfCnpj: '', email: '', telefone: '', endereco: '',
-    senhaPortal: '',
+    senhaPortal: '', representanteNome: '', representanteCpf: '',
   });
 
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
+  const isPJ = form.cpfCnpj.replace(/\D/g, '').length > 11;
   const inputCls = 'w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 bg-gray-50 focus:bg-white transition-all';
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -62,6 +63,22 @@ export default function NovoClientePage() {
             <label className="block text-xs font-semibold text-gray-600 mb-1">Endereço</label>
             <input className={inputCls} value={form.endereco} onChange={e => set('endereco', e.target.value)} placeholder="Rua, número, bairro, cidade" />
           </div>
+          {isPJ && (
+            <>
+              <div className="col-span-2 pt-3 border-t border-gray-100">
+                <p className="text-xs font-bold text-gray-500 uppercase mb-3">Representante Legal (Avalista)</p>
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Nome do Representante Legal</label>
+                <input className={inputCls} value={form.representanteNome} onChange={e => set('representanteNome', e.target.value)} placeholder="Nome completo do representante" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">CPF do Representante</label>
+                <input className={inputCls} value={form.representanteCpf} onChange={e => set('representanteCpf', e.target.value)} placeholder="000.000.000-00" />
+              </div>
+              <div />
+            </>
+          )}
           <div className="col-span-2 pt-3 border-t border-gray-100">
             <label className="block text-xs font-semibold text-gray-600 mb-1">Senha do Portal do Cliente</label>
             <input type="password" className={inputCls} value={form.senhaPortal} onChange={e => set('senhaPortal', e.target.value)} placeholder="Senha para acesso ao portal" />

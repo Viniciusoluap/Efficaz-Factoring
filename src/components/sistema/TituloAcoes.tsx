@@ -27,6 +27,11 @@ type DadosTitulo = {
   spreadLiquido: number;
   impostoProvisao: number;
   clienteNome?: string;
+  clienteEmail?: string;
+  clienteTelefone?: string;
+  clienteEndereco?: string;
+  clienteRepresentanteNome?: string;
+  clienteRepresentanteCpf?: string;
   fornecedorNome?: string;
   observacoes?: string | null;
   criadoEm: string;

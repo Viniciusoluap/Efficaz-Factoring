@@ -13,10 +13,12 @@ export default function EditarClientePage() {
   const [erro, setErro] = useState('');
   const [form, setForm] = useState({
     nome: '', cpfCnpj: '', email: '', telefone: '', endereco: '', ativo: true,
+    representanteNome: '', representanteCpf: '',
   });
 
   const inputCls = 'w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 bg-gray-50 focus:bg-white transition-all';
   const set = (k: string, v: string | boolean) => setForm(p => ({ ...p, [k]: v }));
+  const isPJ = form.cpfCnpj.replace(/\D/g, '').length > 11;
 
   useEffect(() => {
     fetch(`/api/clientes/${id}`)
@@ -29,6 +31,8 @@ export default function EditarClientePage() {
           telefone: data.telefone ?? '',
           endereco: data.endereco ?? '',
           ativo: data.ativo ?? true,
+          representanteNome: data.representanteNome ?? '',
+          representanteCpf: data.representanteCpf ?? '',
         });
       })
       .catch(() => setErro('Erro ao carregar dados.'))
@@ -92,6 +96,22 @@ export default function EditarClientePage() {
             <label className="block text-xs font-semibold text-gray-600 mb-1">Endereço</label>
             <input className={inputCls} value={form.endereco} onChange={e => set('endereco', e.target.value)} />
           </div>
+          {isPJ && (
+            <>
+              <div className="col-span-2 pt-3 border-t border-gray-100">
+                <p className="text-xs font-bold text-gray-500 uppercase mb-3">Representante Legal (Avalista)</p>
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Nome do Representante Legal</label>
+                <input className={inputCls} value={form.representanteNome} onChange={e => set('representanteNome', e.target.value)} placeholder="Nome completo do representante" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">CPF do Representante</label>
+                <input className={inputCls} value={form.representanteCpf} onChange={e => set('representanteCpf', e.target.value)} placeholder="000.000.000-00" />
+              </div>
+              <div />
+            </>
+          )}
           <div className="col-span-2 flex items-center gap-3 pt-3 border-t border-gray-100">
             <label className="text-xs font-semibold text-gray-600">Status</label>
             <button

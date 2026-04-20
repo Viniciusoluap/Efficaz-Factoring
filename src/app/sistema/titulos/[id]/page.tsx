@@ -60,6 +60,8 @@ export default async function TituloDetalhePage({ params }: { params: { id: stri
     clienteEmail: titulo.cliente?.email,
     clienteTelefone: titulo.cliente?.telefone ?? undefined,
     clienteEndereco: titulo.cliente?.endereco ?? undefined,
+    clienteRepresentanteNome: titulo.cliente?.representanteNome ?? undefined,
+    clienteRepresentanteCpf: titulo.cliente?.representanteCpf ?? undefined,
     fornecedorNome: titulo.fornecedor?.nome,
     observacoes: titulo.observacoes,
     criadoEm: format(new Date(titulo.criadoEm), "dd/MM/yyyy 'às' HH:mm"),
