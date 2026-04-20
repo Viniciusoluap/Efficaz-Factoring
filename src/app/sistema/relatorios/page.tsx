@@ -122,7 +122,7 @@ export default function RelatoriosPage() {
       doc.setTextColor(30, 30, 30);
       doc.text(`Resumo — ${periodoLabel}${espelho ? ' (Espelho Fiscal)' : ''}`, 14, 46);
 
-      const pdfRate = Number(dados.config?.aliquotaImposto ?? 35) / 100;
+      const pdfRate = Number(dados.config?.aliquotaImposto ?? 38.63) / 100;
       const tp = dados.totaisPeriodo;
       const spreadBrutoPDF = Number(tp._sum?.spreadBruto ?? 0);
       const baseEspelhoPDF = Number(tp._sum?.baseEspelho ?? 0);
@@ -345,7 +345,7 @@ export default function RelatoriosPage() {
           {/* Resumo geral */}
           <div className={`grid grid-cols-2 md:grid-cols-3 ${espelho ? 'lg:grid-cols-5' : 'lg:grid-cols-6'} gap-4`}>
             {(() => {
-              const rate = Number(dados.config?.aliquotaImposto ?? 35) / 100;
+              const rate = Number(dados.config?.aliquotaImposto ?? 38.63) / 100;
               const tp = dados.totaisPeriodo;
               const spreadBruto = Number(tp._sum?.spreadBruto ?? 0);
               const baseEsp = Number(tp._sum?.baseEspelho ?? 0);
@@ -383,7 +383,7 @@ export default function RelatoriosPage() {
               </h3>
               <div className="space-y-3">
                 {(() => {
-                  const rate = Number(dados.config?.aliquotaImposto ?? 35) / 100;
+                  const rate = Number(dados.config?.aliquotaImposto ?? 38.63) / 100;
                   const tp = dados.totaisPeriodo;
                   const spreadBruto = Number(tp._sum?.spreadBruto ?? 0);
                   const baseEspelho = Number(tp._sum?.baseEspelho ?? 0);
@@ -474,7 +474,7 @@ export default function RelatoriosPage() {
                         </td>
                         <td className="px-3 py-2.5 text-green-600 font-semibold">
                           {espelho
-                            ? formatarMoeda(Number(t.baseEspelho ?? 0) * (1 - Number(dados.config?.aliquotaImposto ?? 35) / 100))
+                            ? formatarMoeda(Number(t.baseEspelho ?? 0) * (1 - Number(dados.config?.aliquotaImposto ?? 38.63) / 100))
                             : formatarMoeda(Number(t.spreadLiquido ?? 0))
                           }
                         </td>

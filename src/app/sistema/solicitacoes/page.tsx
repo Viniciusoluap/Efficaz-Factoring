@@ -430,9 +430,15 @@ export default function SolicitacoesPage() {
                         <p className="text-xs font-semibold text-gray-500 mb-2">Anexos ({selecionadaCliente.anexos.length})</p>
                         <div className="flex flex-wrap gap-2">
                           {selecionadaCliente.anexos.map((url, i) => {
-                            const isPdf = url.toLowerCase().includes('.pdf');
+                            const isDataUri = url.startsWith('data:');
+                            const isPdf = url.startsWith('data:application/pdf') || url.toLowerCase().includes('.pdf');
+                            const ext = isPdf ? 'pdf' : isDataUri ? (url.split(';')[0].split('/')[1] || 'bin') : '';
+                            const downloadName = isDataUri ? `anexo-${i + 1}${ext ? '.' + ext : ''}` : undefined;
                             return (
-                              <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                              <a key={i} href={url}
+                                {...(isDataUri
+                                  ? { download: downloadName }
+                                  : { target: '_blank', rel: 'noopener noreferrer' })}
                                 className="flex items-center gap-1.5 text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-100 px-3 py-2 rounded-xl transition-colors">
                                 {isPdf ? <FileText className="w-4 h-4" /> : <ImageIcon className="w-4 h-4" />}
                                 {isPdf ? `PDF ${i + 1}` : `Imagem ${i + 1}`}

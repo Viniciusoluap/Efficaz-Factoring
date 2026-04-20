@@ -4,7 +4,14 @@ import { useEffect, useState } from 'react';
 import { formatarMoeda, formatarCpfCnpj } from '@/lib/calculos';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { TrendingUp, Clock, CheckCircle2, AlertTriangle, Building2 } from 'lucide-react';
+import { TrendingUp, Clock, CheckCircle2, AlertTriangle, Building2, FileDown } from 'lucide-react';
+
+const MESES = [
+  'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+  'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro',
+];
+const hoje = new Date();
+const ANOS = Array.from({ length: 8 }, (_, i) => hoje.getFullYear() - 2 + i);
 
 const statusLabel: Record<string, { label: string; cor: string }> = {
   PENDENTE:   { label: 'Pendente',   cor: 'bg-amber-100 text-amber-700' },
@@ -19,6 +26,9 @@ export default function FornecedorPortalPage() {
   const [dados, setDados] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [filtroStatus, setFiltroStatus] = useState('');
+  const [mesFiltro, setMesFiltro] = useState<number | ''>(hoje.getMonth() + 1);
+  const [anoFiltro, setAnoFiltro] = useState<number | ''>(hoje.getFullYear());
+  const [gerando, setGerando] = useState(false);
 
   useEffect(() => {
     fetch('/api/portal/fornecedor')
@@ -43,6 +53,115 @@ export default function FornecedorPortalPage() {
   const pendentes = titulos.filter((t: any) => ['PENDENTE', 'APROVADO'].includes(t.status)).length;
   const vencidos = titulos.filter((t: any) => t.status === 'VENCIDO').length;
   const pagos = titulos.filter((t: any) => t.status === 'LIQUIDADO').length;
+
+  const titulosParaPDF = titulos.filter((t: any) => {
+    const d = new Date(t.dataVencimento);
+    if (anoFiltro !== '' && d.getFullYear() !== Number(anoFiltro)) return false;
+    if (mesFiltro !== '' && d.getMonth() + 1 !== Number(mesFiltro)) return false;
+    return true;
+  });
+
+  const periodoLabel = mesFiltro && anoFiltro
+    ? `${MESES[Number(mesFiltro) - 1]} de ${anoFiltro}`
+    : anoFiltro
+    ? `Ano de ${anoFiltro}`
+    : mesFiltro
+    ? `${MESES[Number(mesFiltro) - 1]} (todos os anos)`
+    : 'Todo o período';
+
+  const gerarPDF = async () => {
+    setGerando(true);
+    try {
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+      doc.setFillColor(88, 28, 135);
+      doc.rect(0, 0, 210, 30, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('EFFICAZ FACTORING', 14, 13);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Relatório do Fornecedor — ${periodoLabel}`, 14, 22);
+      doc.text(`Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}`, 130, 22);
+
+      doc.setTextColor(80, 80, 80);
+      doc.setFontSize(9);
+      doc.text(`Fornecedor: ${fornecedor.nome}   |   CPF/CNPJ: ${formatarCpfCnpj(fornecedor.cpfCnpj)}   |   E-mail: ${fornecedor.email}`, 14, 37);
+
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(30, 30, 30);
+      doc.text('Resumo Financeiro', 14, 46);
+
+      const valorPeriodo = titulosParaPDF.reduce((s: number, t: any) => s + Number(t.valor), 0);
+      const rendimentoPeriodo = titulosParaPDF.reduce((s: number, t: any) => s + Number(t.custoCedente), 0);
+
+      autoTable(doc, {
+        startY: 50,
+        head: [['Indicador', 'Valor']],
+        body: [
+          ['Capital Total', formatarMoeda(capitalTotal)],
+          ['Alocado (total)', formatarMoeda(alocado)],
+          ['Rendimento Total', formatarMoeda(rendimento)],
+          ['Disponível', formatarMoeda(disponivel)],
+          [`Volume no Período (${periodoLabel})`, formatarMoeda(valorPeriodo)],
+          [`Rendimento no Período (${periodoLabel})`, formatarMoeda(rendimentoPeriodo)],
+          ['Títulos no Período', String(titulosParaPDF.length)],
+        ],
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [88, 28, 135] },
+        alternateRowStyles: { fillColor: [250, 245, 255] },
+        columnStyles: { 1: { halign: 'right' } },
+        margin: { left: 14, right: 14 },
+      });
+
+      if (titulosParaPDF.length > 0) {
+        const yTitulos = (doc as any).lastAutoTable.finalY + 8;
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(30, 30, 30);
+        doc.text(`Títulos — ${periodoLabel} (${titulosParaPDF.length})`, 14, yTitulos);
+
+        autoTable(doc, {
+          startY: yTitulos + 4,
+          head: [['Nº', 'Tipo', 'Emitente', 'Vencimento', 'Prazo', 'Valor', 'Rendimento', 'Status']],
+          body: titulosParaPDF.map((t: any) => [
+            t.numero,
+            t.tipo,
+            t.emitenteNome,
+            format(new Date(t.dataVencimento), 'dd/MM/yyyy'),
+            `${t.prazo}d`,
+            formatarMoeda(Number(t.valor)),
+            formatarMoeda(Number(t.custoCedente)),
+            t.status === 'LIQUIDADO' ? 'Pago' : t.status === 'VENCIDO' ? 'Vencido' : t.status === 'APROVADO' ? 'Aprovado' : 'Pendente',
+          ]),
+          styles: { fontSize: 7.5, cellPadding: 2 },
+          headStyles: { fillColor: [88, 28, 135] },
+          alternateRowStyles: { fillColor: [250, 245, 255] },
+          columnStyles: { 5: { halign: 'right' }, 6: { halign: 'right' } },
+          margin: { left: 14, right: 14 },
+        });
+      }
+
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text('Efficaz Factoring — CNPJ 04.578.232/0001-82', 14, 290);
+        doc.text(`Página ${i} de ${pageCount}`, 190, 290, { align: 'right' });
+      }
+
+      const mesStr = mesFiltro !== '' ? String(mesFiltro).padStart(2, '0') : 'todos';
+      const anoStr = anoFiltro !== '' ? String(anoFiltro) : 'todos';
+      doc.save(`relatorio-fornecedor-${anoStr}-${mesStr}.pdf`);
+    } finally {
+      setGerando(false);
+    }
+  };
 
   return (
     <div className="max-w-5xl space-y-5">
@@ -91,9 +210,9 @@ export default function FornecedorPortalPage() {
         ))}
       </div>
 
-      {/* Filtro status */}
+      {/* Títulos */}
       <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <h2 className="font-semibold text-gray-700 flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-purple-600" />
             Meus Títulos
@@ -107,6 +226,35 @@ export default function FornecedorPortalPage() {
             <option value="VENCIDO">Vencido</option>
             <option value="LIQUIDADO">Pago</option>
           </select>
+        </div>
+
+        {/* Filtros de relatório */}
+        <div className="flex items-center gap-2 mb-4 pt-3 border-t border-gray-100 flex-wrap">
+          <span className="text-xs font-semibold text-gray-500 mr-1">Imprimir relatório:</span>
+          <select
+            value={mesFiltro}
+            onChange={e => setMesFiltro(e.target.value === '' ? '' : Number(e.target.value))}
+            className="text-sm border border-gray-200 rounded-xl px-3 py-1.5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+          >
+            <option value="">Todos os meses</option>
+            {MESES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+          </select>
+          <select
+            value={anoFiltro}
+            onChange={e => setAnoFiltro(e.target.value === '' ? '' : Number(e.target.value))}
+            className="text-sm border border-gray-200 rounded-xl px-3 py-1.5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+          >
+            <option value="">Todos os anos</option>
+            {ANOS.map(a => <option key={a} value={a}>{a}</option>)}
+          </select>
+          <button
+            onClick={gerarPDF}
+            disabled={gerando}
+            className="flex items-center gap-2 text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 px-4 py-1.5 rounded-xl transition-colors disabled:opacity-60 shadow-sm"
+          >
+            <FileDown className="w-4 h-4" />
+            {gerando ? 'Gerando...' : `PDF${titulosParaPDF.length > 0 ? ` (${titulosParaPDF.length})` : ''}`}
+          </button>
         </div>
 
         {titulosFiltrados.length === 0 ? (
