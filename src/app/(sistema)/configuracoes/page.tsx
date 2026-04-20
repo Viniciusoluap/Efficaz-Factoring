@@ -4,7 +4,11 @@ import { useEffect, useState } from 'react';
 import { Save, Settings, AlertCircle, CheckCircle, Info } from 'lucide-react';
 
 const defaultForm = {
-  nomeEmpresa: '', cnpj: '', emailSistema: '',
+  nomeEmpresa: 'Efficaz Factoring',
+  cnpj: '04.578.232/0001-82',
+  emailSistema: 'contato@grupoefficaz.com.br',
+  telefone: '(99) 8139-2210',
+  endereco: 'Rua Leôncio Pires Dourado, nº 840-A, Bairro Bacuri, Imperatriz – MA, CEP 65.901-020',
   taxaMinimaFiscal: '0.5',
   aliquotaImposto: '35',
   aliquotaPIS: '1.65',
@@ -23,9 +27,11 @@ export default function ConfiguracoesPage() {
   useEffect(() => {
     fetch('/api/configuracoes').then(r => r.json()).then(d => {
       if (d) setForm({
-        nomeEmpresa: d.nomeEmpresa ?? '',
-        cnpj: d.cnpj ?? '',
-        emailSistema: d.emailSistema ?? '',
+        nomeEmpresa: d.nomeEmpresa ?? 'Efficaz Factoring',
+        cnpj: d.cnpj ?? '04.578.232/0001-82',
+        emailSistema: d.emailSistema ?? 'contato@grupoefficaz.com.br',
+        telefone: d.telefone ?? '(99) 8139-2210',
+        endereco: d.endereco ?? 'Rua Leôncio Pires Dourado, nº 840-A, Bairro Bacuri, Imperatriz – MA, CEP 65.901-020',
         taxaMinimaFiscal: String(d.taxaMinimaFiscal ?? 0.5),
         aliquotaImposto: String(d.aliquotaImposto ?? 35),
         aliquotaPIS: String(d.aliquotaPIS ?? 1.65),
@@ -81,8 +87,16 @@ export default function ConfiguracoesPage() {
               <input className={inputCls} value={form.cnpj} onChange={e => set('cnpj', e.target.value)} placeholder="00.000.000/0001-00" />
             </div>
             <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Telefone</label>
+              <input className={inputCls} value={(form as any).telefone ?? ''} onChange={e => set('telefone', e.target.value)} placeholder="(99) 9999-9999" />
+            </div>
+            <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">E-mail do Sistema</label>
               <input type="email" className={inputCls} value={form.emailSistema} onChange={e => set('emailSistema', e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Endereço Completo</label>
+              <input className={inputCls} value={(form as any).endereco ?? ''} onChange={e => set('endereco', e.target.value)} placeholder="Rua, nº, Bairro, Cidade – UF, CEP" />
             </div>
           </div>
         </div>
