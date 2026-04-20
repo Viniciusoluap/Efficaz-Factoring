@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
   if (fornecedorId) whereGeral.fornecedorId = fornecedorId;
   if (statusParam) whereGeral.status = statusParam;
 
-  const [totaisGeral, totaisPeriodo, porTipo, titulos, clientes, fornecedores] = await Promise.all([
+  const [totaisGeral, totaisPeriodo, porTipo, titulos, clientes, fornecedores, config] = await Promise.all([
     prisma.titulo.aggregate({
       _sum: { valor: true, encargo: true, spreadBruto: true, impostoProvisao: true, spreadLiquido: true, valorLiquidoCliente: true, baseEspelho: true },
       _count: { id: true },
@@ -61,12 +61,13 @@ export async function GET(req: NextRequest) {
     }),
     prisma.titulo.findMany({
       where,
-      orderBy: { criadoEm: 'desc' },
+      orderBy: [{ dataVencimento: 'asc' }, { valor: 'asc' }],
       include: { cliente: { select: { nome: true } }, fornecedor: { select: { nome: true } } },
     }),
     prisma.cliente.findMany({ orderBy: { nome: 'asc' }, select: { id: true, nome: true } }),
     prisma.fornecedor.findMany({ orderBy: { nome: 'asc' }, select: { id: true, nome: true } }),
+    prisma.configuracao.findUnique({ where: { id: 'default' }, select: { aliquotaImposto: true } }),
   ]);
 
-  return NextResponse.json({ totaisGeral, totaisPeriodo, porTipo, titulos, clientes, fornecedores });
+  return NextResponse.json({ totaisGeral, totaisPeriodo, porTipo, titulos, clientes, fornecedores, config });
 }

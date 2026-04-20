@@ -28,7 +28,7 @@ export default async function PortalClientePage() {
   const cliente = await prisma.cliente.findUnique({
     where: { id: clienteId },
     include: {
-      titulos: { orderBy: { dataVencimento: 'asc' } },
+      titulos: { orderBy: [{ dataVencimento: 'asc' }, { valor: 'asc' }] },
     },
   });
 

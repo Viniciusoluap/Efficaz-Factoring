@@ -8,12 +8,22 @@ export default withAuth(
     const { pathname } = req.nextUrl;
 
     if (perfil === 'CLIENTE') {
-      // Clients may only access portal pages and portal API routes
       const allowed =
         pathname.startsWith('/sistema/portal') ||
         pathname.startsWith('/api/portal');
       if (!allowed) {
         return NextResponse.redirect(new URL('/sistema/portal', req.url));
+      }
+    }
+
+    if (perfil === 'FORNECEDOR') {
+      const allowed =
+        pathname.startsWith('/sistema/portal/fornecedor') ||
+        pathname.startsWith('/sistema/portal/configuracoes') ||
+        pathname.startsWith('/api/portal/fornecedor') ||
+        pathname.startsWith('/api/portal/perfil');
+      if (!allowed) {
+        return NextResponse.redirect(new URL('/sistema/portal/fornecedor', req.url));
       }
     }
 

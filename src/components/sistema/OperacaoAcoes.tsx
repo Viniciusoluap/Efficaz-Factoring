@@ -49,7 +49,8 @@ export default function OperacaoAcoes({ operacao, titulosPDF, titulosFornecedor,
   const handlePdf = async () => {
     setLoadingPdf(true);
     try {
-      await gerarContratoOperacaoPDF(operacao, titulosPDF);
+      const cfg = await fetch('/api/configuracoes').then(r => r.json()).catch(() => null);
+      await gerarContratoOperacaoPDF(operacao, titulosPDF, cfg ?? undefined);
     } finally {
       setLoadingPdf(false);
     }
@@ -58,7 +59,8 @@ export default function OperacaoAcoes({ operacao, titulosPDF, titulosFornecedor,
   const handlePdfFornecedor = async () => {
     setLoadingPdfForn(true);
     try {
-      await gerarContratoFornecedorPDF(operacao, titulosFornecedor);
+      const cfg = await fetch('/api/configuracoes').then(r => r.json()).catch(() => null);
+      await gerarContratoFornecedorPDF(operacao, titulosFornecedor, cfg ?? undefined);
     } finally {
       setLoadingPdfForn(false);
     }

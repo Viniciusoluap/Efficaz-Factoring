@@ -1,14 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-export async function GET(req: NextRequest) {
-  const token = await getToken({ req });
-  if (!token || (token as any).perfil !== 'CLIENTE') {
+export async function GET() {
+  const session = await getServerSession(authOptions);
+  const user = session?.user as any;
+  if (!session || user?.perfil !== 'CLIENTE') {
     return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
   }
 
-  const clienteId = (token as any).clienteId as string | null;
+  const clienteId = user?.clienteId as string | null;
   if (!clienteId) return NextResponse.json({ error: 'Cliente não vinculado.' }, { status: 403 });
 
   const [operacoes, totais] = await Promise.all([

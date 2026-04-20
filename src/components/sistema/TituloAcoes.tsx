@@ -39,7 +39,8 @@ export default function TituloAcoes({ dados }: { dados: DadosTitulo }) {
   const handlePdf = async () => {
     setLoadingPdf(true);
     try {
-      await gerarContratoPDF(dados);
+      const cfg = await fetch('/api/configuracoes').then(r => r.json()).catch(() => null);
+      await gerarContratoPDF(dados, cfg ?? undefined);
     } finally {
       setLoadingPdf(false);
     }

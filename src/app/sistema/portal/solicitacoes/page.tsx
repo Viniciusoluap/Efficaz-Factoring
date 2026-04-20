@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, FormEvent } from 'react';
 import { formatarMoeda } from '@/lib/calculos';
-import { Send, Inbox, AlertCircle, CheckCircle2, Loader2, Clock, Paperclip, X, ImageIcon, FileText } from 'lucide-react';
+import { Send, Inbox, AlertCircle, CheckCircle2, Loader2, Clock, Paperclip, X, ImageIcon, FileText, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -48,6 +48,7 @@ export default function PortalSolicitacoesPage() {
   const [descricao, setDescricao] = useState('');
   const [valorEstimado, setValorEstimado] = useState('');
   const [arquivos, setArquivos] = useState<Arquivo[]>([]);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -98,6 +99,12 @@ export default function PortalSolicitacoesPage() {
       if (arq?.preview) URL.revokeObjectURL(arq.preview);
       return prev.filter(a => a.id !== id);
     });
+  };
+
+  const excluirSolicitacao = async (id: string) => {
+    await fetch(`/api/portal/solicitacoes/${id}`, { method: 'DELETE' });
+    setSolicitacoes(prev => prev.filter((s: any) => s.id !== id));
+    setConfirmDelete(null);
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -306,6 +313,28 @@ export default function PortalSolicitacoesPage() {
                   {s.observacaoAdmin && (
                     <div className="mt-2 p-2.5 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-700">
                       <strong>Resposta:</strong> {s.observacaoAdmin}
+                    </div>
+                  )}
+
+                  {s.status === 'AGUARDANDO' && (
+                    <div className="mt-3 flex gap-1.5">
+                      {confirmDelete === s.id ? (
+                        <>
+                          <button onClick={() => excluirSolicitacao(s.id)}
+                            className="text-xs font-semibold bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg transition-colors">
+                            Confirmar exclusão
+                          </button>
+                          <button onClick={() => setConfirmDelete(null)}
+                            className="text-xs text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg font-medium">
+                            Cancelar
+                          </button>
+                        </>
+                      ) : (
+                        <button onClick={() => setConfirmDelete(s.id)}
+                          className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2.5 py-1.5 rounded-lg transition-colors border border-red-100">
+                          <Trash2 className="w-3 h-3" /> Excluir
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
