@@ -22,6 +22,7 @@ type Dados = {
   clientes: { id: string; nome: string }[];
   fornecedores: { id: string; nome: string }[];
   config?: { aliquotaImposto: number } | null;
+  totalProrrogacoes?: number;
 };
 
 export default function RelatoriosPage() {
@@ -128,6 +129,7 @@ export default function RelatoriosPage() {
       const baseEspelhoPDF = Number(tp._sum?.baseEspelho ?? 0);
       const impostoPDF = espelho ? baseEspelhoPDF * pdfRate : spreadBrutoPDF * pdfRate;
       const spreadLiquidoPDF = espelho ? baseEspelhoPDF - impostoPDF : spreadBrutoPDF - impostoPDF;
+      const totalProrrgPDF = Number(dados.totalProrrogacoes ?? 0);
       autoTable(doc, {
         startY: 50,
         head: [['Indicador', 'Valor']],
@@ -141,6 +143,7 @@ export default function RelatoriosPage() {
           ['Títulos no período', String(tp._count?.id ?? 0)],
           ['Volume', formatarMoeda(Number(tp._sum?.valor ?? 0))],
           ['Encargos', formatarMoeda(Number(tp._sum?.encargo ?? 0))],
+          ...(totalProrrgPDF > 0 ? [['Encargos de Prorrogação', formatarMoeda(totalProrrgPDF)]] : []),
           ['Spread Bruto', formatarMoeda(spreadBrutoPDF)],
           [`Imposto (${(pdfRate * 100).toFixed(2)}%)`, formatarMoeda(impostoPDF)],
           ['Spread Líquido', formatarMoeda(spreadLiquidoPDF)],
@@ -390,6 +393,7 @@ export default function RelatoriosPage() {
                   const imposto = espelho ? baseEspelho * rate : spreadBruto * rate;
                   const spreadLiquido = espelho ? baseEspelho - imposto : spreadBruto - imposto;
                   const aliqLabel = `(${(rate * 100).toFixed(2)}%)`;
+                  const totalProrrg = Number(dados.totalProrrogacoes ?? 0);
                   return espelho ? [
                     { label: 'Títulos', value: String(tp._count?.id ?? 0) },
                     { label: 'Volume', value: formatarMoeda(Number(tp._sum?.valor ?? 0)) },
@@ -403,6 +407,7 @@ export default function RelatoriosPage() {
                     { label: 'Spread Bruto', value: formatarMoeda(spreadBruto) },
                     { label: `Imposto ${aliqLabel}`, value: formatarMoeda(imposto) },
                     { label: 'Spread Líquido', value: formatarMoeda(spreadLiquido) },
+                    ...(totalProrrg > 0 ? [{ label: 'Encargos de Prorrogação', value: formatarMoeda(totalProrrg) }] : []),
                   ];
                 })().map(({ label, value }) => (
                   <div key={label} className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0">

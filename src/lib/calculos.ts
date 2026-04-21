@@ -134,9 +134,11 @@ export function calcularFiscal(
   const baseEspelho = ((valor * txEspelhoDecimal) / 30) * prazoEfetivo;
   const lucroEspelho = resultado.spreadBruto - baseEspelho;
 
-  const impostoProvisao = baseEspelho > 0
+  const impostoCalc = baseEspelho > 0
     ? arredondar((baseEspelho * aliquotaImposto) / 100)
     : 0;
+  // Imposto nunca pode exceder o spread — evita spread líquido negativo
+  const impostoProvisao = Math.min(impostoCalc, Math.max(0, resultado.spreadBruto));
 
   const spreadLiquido = arredondar(resultado.spreadBruto - impostoProvisao);
   const aliquotaEfetiva = resultado.spreadBruto > 0

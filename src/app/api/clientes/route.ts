@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
 
   try {
-    const { nome, cpfCnpj, email, telefone, endereco, senhaPortal } = await req.json();
+    const { nome, cpfCnpj, email, telefone, endereco, senhaPortal, representanteNome, representanteCpf } = await req.json();
     if (!nome || !cpfCnpj || !email) {
       return NextResponse.json({ error: 'Nome, CPF/CNPJ e e-mail são obrigatórios.' }, { status: 400 });
     }
@@ -33,7 +33,11 @@ export async function POST(req: NextRequest) {
     });
 
     const cliente = await prisma.cliente.create({
-      data: { usuarioId: usuario.id, nome, cpfCnpj, email, telefone, endereco },
+      data: {
+        usuarioId: usuario.id, nome, cpfCnpj, email, telefone, endereco,
+        ...(representanteNome ? { representanteNome } : {}),
+        ...(representanteCpf ? { representanteCpf } : {}),
+      },
     });
 
     return NextResponse.json(cliente, { status: 201 });

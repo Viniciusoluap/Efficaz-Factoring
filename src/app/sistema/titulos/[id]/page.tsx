@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import TituloAcoes from '@/components/sistema/TituloAcoes';
 import AlterarStatusBtn from '@/components/sistema/AlterarStatusBtn';
+import ProrrogarBtn from '@/components/sistema/ProrrogarBtn';
+import PagamentoParcialBtn from '@/components/sistema/PagamentoParcialBtn';
 
 const statusLabel: Record<string, string> = {
   PENDENTE: 'Pendente', APROVADO: 'Aprovado', VENCIDO: 'Vencido',
@@ -60,6 +62,8 @@ export default async function TituloDetalhePage({ params }: { params: { id: stri
     clienteEmail: titulo.cliente?.email,
     clienteTelefone: titulo.cliente?.telefone ?? undefined,
     clienteEndereco: titulo.cliente?.endereco ?? undefined,
+    clienteRepresentanteNome: titulo.cliente?.representanteNome ?? undefined,
+    clienteRepresentanteCpf: titulo.cliente?.representanteCpf ?? undefined,
     fornecedorNome: titulo.fornecedor?.nome,
     observacoes: titulo.observacoes,
     criadoEm: format(new Date(titulo.criadoEm), "dd/MM/yyyy 'às' HH:mm"),
@@ -77,7 +81,27 @@ export default async function TituloDetalhePage({ params }: { params: { id: stri
         <Link href="/sistema/titulos" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
           <ArrowLeft className="w-4 h-4" /> Voltar para Títulos
         </Link>
-        <TituloAcoes dados={dados} />
+        <div className="flex items-center gap-2 flex-wrap">
+          <TituloAcoes dados={dados} />
+          <ProrrogarBtn
+            tituloId={titulo.id}
+            tituloNumero={titulo.numero}
+            tituloTipo={titulo.tipo}
+            valor={dados.valor}
+            taxaClienteAtual={dados.taxaCliente}
+            taxaFornecedorAtual={dados.taxaFornecedor}
+            dataVencimentoAtual={dados.dataVencimento}
+            dataVencimentoISO={format(new Date(titulo.dataVencimento), 'yyyy-MM-dd')}
+            emitenteNome={titulo.emitenteNome}
+            emitenteCpfCnpj={titulo.emitenteCpfCnpj}
+            sacadoNome={titulo.sacadoNome}
+            sacadoCpfCnpj={titulo.sacadoCpfCnpj}
+            clienteNome={titulo.cliente?.nome}
+            clienteRepresentanteNome={titulo.cliente?.representanteNome ?? undefined}
+            clienteRepresentanteCpf={titulo.cliente?.representanteCpf ?? undefined}
+          />
+          <PagamentoParcialBtn tituloId={titulo.id} valorAtual={dados.valor} />
+        </div>
       </div>
 
       {/* Header do título */}

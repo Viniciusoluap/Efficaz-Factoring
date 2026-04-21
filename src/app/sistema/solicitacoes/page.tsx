@@ -431,8 +431,14 @@ export default function SolicitacoesPage() {
                         <div className="flex flex-wrap gap-2">
                           {selecionadaCliente.anexos.map((url, i) => {
                             const isDataUri = url.startsWith('data:');
-                            const isPdf = url.startsWith('data:application/pdf') || url.toLowerCase().includes('.pdf');
-                            const ext = isPdf ? 'pdf' : isDataUri ? (url.split(';')[0].split('/')[1] || 'bin') : '';
+                            const mime = isDataUri ? (url.match(/^data:([^;]+);/)?.[1] ?? '') : '';
+                            const isPdf = mime === 'application/pdf' || url.toLowerCase().includes('.pdf');
+                            const isImage = mime.startsWith('image/');
+                            const extMap: Record<string, string> = {
+                              'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif',
+                              'image/webp': 'webp', 'application/pdf': 'pdf',
+                            };
+                            const ext = isPdf ? 'pdf' : (extMap[mime] ?? (isDataUri ? 'bin' : ''));
                             const downloadName = isDataUri ? `anexo-${i + 1}${ext ? '.' + ext : ''}` : undefined;
                             return (
                               <a key={i} href={url}
@@ -441,7 +447,7 @@ export default function SolicitacoesPage() {
                                   : { target: '_blank', rel: 'noopener noreferrer' })}
                                 className="flex items-center gap-1.5 text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-100 px-3 py-2 rounded-xl transition-colors">
                                 {isPdf ? <FileText className="w-4 h-4" /> : <ImageIcon className="w-4 h-4" />}
-                                {isPdf ? `PDF ${i + 1}` : `Imagem ${i + 1}`}
+                                {isPdf ? `PDF ${i + 1}` : isImage ? `Imagem ${i + 1}` : `Arquivo ${i + 1}`}
                               </a>
                             );
                           })}

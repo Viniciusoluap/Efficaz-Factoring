@@ -17,7 +17,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (!await auth(req)) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
 
   try {
-    const { nome, cpfCnpj, email, telefone, endereco, ativo } = await req.json();
+    const { nome, cpfCnpj, email, telefone, endereco, ativo, representanteNome, representanteCpf } = await req.json();
 
     const cliente = await prisma.cliente.update({
       where: { id: params.id },
@@ -28,6 +28,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         ...(telefone !== undefined && { telefone }),
         ...(endereco !== undefined && { endereco }),
         ...(ativo !== undefined && { ativo }),
+        representanteNome: representanteNome || null,
+        representanteCpf: representanteCpf || null,
       },
     });
 

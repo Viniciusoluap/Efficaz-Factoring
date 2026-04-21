@@ -4,6 +4,10 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { calcularOperacao, calcularFiscal } from '@/lib/calculos';
 
+// Dates from input are YYYY-MM-DD strings. Using UTC noon prevents timezone-shift
+// when the server runs in a non-UTC locale (e.g. UTC-3 would shift midnight to prev day).
+const parseDate = (s: string) => new Date(s.includes('T') ? s : s + 'T12:00:00.000Z');
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
@@ -33,23 +37,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Campos obrigatórios ausentes.' }, { status: 400 });
     }
 
-    // Calcular resultado financeiro
+    const dEmissao = parseDate(dataEmissao);
+    const dVencimento = parseDate(dataVencimento);
+
     const resultado = calcularOperacao({
       valor: parseFloat(valor),
       taxaCliente: parseFloat(taxaCliente),
       taxaFornecedor: parseFloat(taxaFornecedor),
-      dataEmissao: new Date(dataEmissao),
-      dataVencimento: new Date(dataVencimento),
+      dataEmissao: dEmissao,
+      dataVencimento: dVencimento,
     });
 
-    // Buscar configuração fiscal
-    const config = await prisma.configuracao.findUnique({ where: { id: 'default' } });
+    let config: any = null;
+    try {
+      const rows = await prisma.$queryRaw<any[]>`SELECT * FROM configuracoes WHERE id = 'default'`;
+      config = rows[0] ?? null;
+    } catch {}
+
     const fiscal = calcularFiscal(
       resultado,
       parseFloat(valor),
-      resultado.prazo,
+      resultado.prazoEfetivo,
       Number(config?.taxaMinimaFiscal ?? 0.5),
-      Number(config?.aliquotaImposto ?? 15),
+      Number(config?.aliquotaImposto ?? 38.63),
     );
 
     const titulo = await prisma.titulo.create({
@@ -60,8 +70,8 @@ export async function POST(req: NextRequest) {
         emitenteNome,
         sacadoCpfCnpj,
         sacadoNome,
-        dataEmissao: new Date(dataEmissao),
-        dataVencimento: new Date(dataVencimento),
+        dataEmissao: dEmissao,
+        dataVencimento: dVencimento,
         prazo: resultado.prazo,
         valor: parseFloat(valor),
         taxaCliente: parseFloat(taxaCliente),

@@ -23,6 +23,8 @@ export type DadosTitulo = {
   clienteEmail?: string;
   clienteTelefone?: string;
   clienteEndereco?: string;
+  clienteRepresentanteNome?: string;
+  clienteRepresentanteCpf?: string;
   fornecedorNome?: string;
   criadoEm: string;
 };
@@ -142,6 +144,11 @@ export async function gerarContratoPDF(dados: DadosTitulo, empresaConfig?: Empre
   y = paragrafo(doc,
     `DEVEDOR / SACADO: ${dados.sacadoNome}, inscrito(a) no CPF/CNPJ sob o nº ${formatarCpfCnpj(dados.sacadoCpfCnpj)}, doravante denominado(a) simplesmente "DEVEDOR".`,
     y, L, W);
+  if (dados.clienteRepresentanteNome && dados.clienteRepresentanteCpf) {
+    y = paragrafo(doc,
+      `AVALISTA: ${dados.clienteRepresentanteNome}, inscrito(a) no CPF sob o nº ${formatarCpfCnpj(dados.clienteRepresentanteCpf)}, representante legal do CEDENTE, doravante denominado(a) simplesmente "AVALISTA".`,
+      y, L, W);
+  }
 
   // ── CLÁUSULA 1ª ─────────────────────────────────────────────────
   y = secao(doc, 'CLÁUSULA PRIMEIRA – DO OBJETO E DA NATUREZA JURÍDICA', y, L);
@@ -213,6 +220,11 @@ export async function gerarContratoPDF(dados: DadosTitulo, empresaConfig?: Empre
   y = paragrafo(doc,
     '4.2. Nas hipóteses do item 4.1, o CEDENTE obriga-se a restituir à CESSIONÁRIA o valor integral pago (item 2.2), acrescido de multa de 10% (dez por cento), juros de mora de 1% (um por cento) ao mês e correção monetária pelo IPCA, a contar da data do pagamento, nos termos dos arts. 394 a 396 e 408 do Código Civil.',
     y, L, W);
+  if (dados.clienteRepresentanteNome && dados.clienteRepresentanteCpf) {
+    y = paragrafo(doc,
+      `4.3. O AVALISTA ${dados.clienteRepresentanteNome}, CPF ${formatarCpfCnpj(dados.clienteRepresentanteCpf)}, responsabiliza-se solidariamente e como principal pagador por todas as obrigações do CEDENTE decorrentes deste contrato, renunciando expressamente ao benefício de ordem previsto no art. 827 do Código Civil, respondendo com seus bens presentes e futuros em caso de inadimplemento do CEDENTE.`,
+      y, L, W);
+  }
 
   // ── CLÁUSULA 5ª ─────────────────────────────────────────────────
   y = secao(doc, 'CLÁUSULA QUINTA – DO INADIMPLEMENTO DO DEVEDOR', y, L);
@@ -303,7 +315,25 @@ export async function gerarContratoPDF(dados: DadosTitulo, empresaConfig?: Empre
   doc.text('CEDENTE', 112, y);
   y += 16;
 
+  // Bloco AVALISTA (se aplicável)
+  if (dados.clienteRepresentanteNome && dados.clienteRepresentanteCpf) {
+    const av = addPage(doc, y + 20);
+    y = av.y;
+    doc.line(L, y, L + 78, y);
+    y += 6;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(15, 23, 42);
+    doc.text(dados.clienteRepresentanteNome, L, y, { maxWidth: 78 });
+    y += 5;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(110, 110, 130);
+    doc.text(`CPF: ${formatarCpfCnpj(dados.clienteRepresentanteCpf)}`, L, y);
+    y += 5;
+    doc.text('AVALISTA / REPRESENTANTE LEGAL', L, y);
+    y += 16;
+  }
+
   // Testemunhas
+  const av2 = addPage(doc, y + 20);
+  y = av2.y;
   doc.setTextColor(100, 100, 120);
   doc.setFontSize(7.5);
   doc.text('Testemunha 1:', L, y);
@@ -364,6 +394,8 @@ export type OperacaoPDF = {
   clienteEmail?: string;
   clienteTelefone?: string;
   clienteEndereco?: string;
+  clienteRepresentanteNome?: string;
+  clienteRepresentanteCpf?: string;
   fornecedorNome?: string;
   fornecedorCpfCnpj?: string;
   fornecedorEmail?: string;
@@ -475,6 +507,11 @@ export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: T
       `DEVEDOR / SACADO: ${t0.sacadoNome}, inscrito(a) no CPF/CNPJ sob o nº ${formatarCpfCnpj(t0.sacadoCpfCnpj)}, doravante denominado(a) simplesmente "DEVEDOR".`,
       y, L, W);
   }
+  if (operacao.clienteRepresentanteNome && operacao.clienteRepresentanteCpf) {
+    y = paragrafo(doc,
+      `AVALISTA: ${operacao.clienteRepresentanteNome}, inscrito(a) no CPF sob o nº ${formatarCpfCnpj(operacao.clienteRepresentanteCpf)}, representante legal do CEDENTE, doravante denominado(a) simplesmente "AVALISTA".`,
+      y, L, W);
+  }
   if (operacao.clienteNome) {
     y = paragrafo(doc, `CLIENTE CUSTODIANTE: ${operacao.clienteNome}.`, y, L, W);
   }
@@ -567,6 +604,11 @@ export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: T
   y = paragrafo(doc,
     `4.2. Nas hipóteses do item 4.1, o CEDENTE obriga-se a restituir à CESSIONÁRIA o valor integral pago, acrescido de multa de 10% (dez por cento), juros de mora de 1% (um por cento) ao mês e correção monetária pelo IPCA, a contar da data do pagamento.`,
     y, L, W);
+  if (operacao.clienteRepresentanteNome && operacao.clienteRepresentanteCpf) {
+    y = paragrafo(doc,
+      `4.3. O AVALISTA ${operacao.clienteRepresentanteNome}, CPF ${formatarCpfCnpj(operacao.clienteRepresentanteCpf)}, responsabiliza-se solidariamente e como principal pagador por todas as obrigações do CEDENTE decorrentes deste contrato, renunciando expressamente ao benefício de ordem previsto no art. 827 do Código Civil, respondendo com seus bens presentes e futuros em caso de inadimplemento do CEDENTE.`,
+      y, L, W);
+  }
 
   // ── CLÁUSULA 5ª ─────────────────────────────────────────────────
   y = secao(doc, 'CLÁUSULA QUINTA – DO INADIMPLEMENTO DOS DEVEDORES', y, L);
@@ -634,6 +676,22 @@ export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: T
   doc.text('CESSIONÁRIA', L, y);
   doc.text('CEDENTE', 112, y);
   y += 16;
+
+  // Bloco AVALISTA — contrato de operação
+  if (operacao.clienteRepresentanteNome && operacao.clienteRepresentanteCpf) {
+    const avOp = addPage(doc, y + 20);
+    y = avOp.y;
+    doc.line(L, y, L + 78, y);
+    y += 6;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(15, 23, 42);
+    doc.text(operacao.clienteRepresentanteNome, L, y, { maxWidth: 78 });
+    y += 5;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(110, 110, 130);
+    doc.text(`CPF: ${formatarCpfCnpj(operacao.clienteRepresentanteCpf)}`, L, y);
+    y += 5;
+    doc.text('AVALISTA / REPRESENTANTE LEGAL', L, y);
+    y += 16;
+  }
 
   doc.setTextColor(100, 100, 120);
   doc.setFontSize(7.5);
@@ -939,7 +997,7 @@ function valorPorExtenso(valor: number): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function addRodapeDocumento(doc: jsPDF, total: number) {
+function addRodapeDocumento(doc: jsPDF, total: number, empresa = EMPRESA_DEFAULT) {
   for (let i = 1; i <= total; i++) {
     doc.setPage(i);
     doc.setFillColor(15, 23, 42);
@@ -947,7 +1005,7 @@ function addRodapeDocumento(doc: jsPDF, total: number) {
     doc.setFontSize(6.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(160, 175, 210);
-    doc.text(`${EMPRESA.razaoSocial}  ·  CNPJ ${EMPRESA.cnpj}  ·  ${EMPRESA.email}  ·  ${EMPRESA.telefone}`,
+    doc.text(`${empresa.razaoSocial}  ·  CNPJ ${empresa.cnpj}  ·  ${empresa.email}  ·  ${empresa.telefone}`,
       105, 289, { align: 'center' });
     doc.text(`Página ${i} de ${total}`, 105, 294, { align: 'center' });
   }
@@ -1184,6 +1242,187 @@ function gerarPaginaCheque(doc: jsPDF, t: TituloDocumentoItem) {
     const linhas = doc.splitTextToSize(value, W);
     doc.text(linhas, L, y); y += linhas.length * 4 + 4;
   }
+}
+
+export type DadosProrrogacao = {
+  tituloNumero: string;
+  tituloTipo: string;
+  emitenteNome: string;
+  emitenteCpfCnpj: string;
+  sacadoNome: string;
+  sacadoCpfCnpj: string;
+  dataVencAnterior: string;
+  dataVencNova: string;
+  taxaCliente: number;
+  encargoProrrogacao: number;
+  clienteNome?: string;
+  clienteRepresentanteNome?: string;
+  clienteRepresentanteCpf?: string;
+};
+
+export async function gerarContratoProrrogacaoPDF(dados: DadosProrrogacao, empresaConfig?: EmpresaConfig) {
+  const EMPRESA = buildEmpresa(empresaConfig);
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const L = 18;
+  const W = 174;
+  let y = 0;
+
+  // Cabeçalho
+  doc.setFillColor(15, 23, 42);
+  doc.rect(0, 0, 210, 32, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(15);
+  doc.setFont('helvetica', 'bold');
+  doc.text(EMPRESA.fantasia.toUpperCase(), L, 13);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(160, 175, 210);
+  doc.text('INSTRUMENTO PARTICULAR DE PRORROGAÇÃO DE PRAZO', L, 20);
+  doc.text(`CNPJ ${EMPRESA.cnpj}  ·  ${EMPRESA.email}`, L, 26);
+
+  y = 42;
+
+  doc.setTextColor(15, 23, 42);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text('INSTRUMENTO PARTICULAR DE', 105, y, { align: 'center' });
+  y += 5;
+  doc.text('PRORROGAÇÃO DE PRAZO DE TÍTULO', 105, y, { align: 'center' });
+  y += 7;
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 100, 130);
+  doc.text(`Título nº ${dados.tituloNumero}  ·  Gerado em ${dataAtualPorExtenso()}`, 105, y, { align: 'center' });
+  y += 5;
+  doc.setDrawColor(200, 210, 230);
+  doc.setLineWidth(0.4);
+  doc.line(L, y, 210 - L, y);
+  y += 8;
+
+  y = secao(doc, 'IDENTIFICAÇÃO DAS PARTES', y, L);
+  y = paragrafo(doc,
+    `CESSIONÁRIA: ${EMPRESA.razaoSocial}, pessoa jurídica de direito privado, inscrita no CNPJ/MF sob o nº ${EMPRESA.cnpj}, com sede na ${EMPRESA.endereco}, ${EMPRESA.cidade}, ${EMPRESA.cep}, doravante denominada simplesmente "CESSIONÁRIA".`,
+    y, L, W);
+  y = paragrafo(doc,
+    `CEDENTE: ${dados.clienteNome ?? dados.emitenteNome}, inscrito(a) no CPF/CNPJ sob o nº ${formatarCpfCnpj(dados.emitenteCpfCnpj)}, doravante denominado(a) simplesmente "CEDENTE".`,
+    y, L, W);
+  if (dados.clienteRepresentanteNome && dados.clienteRepresentanteCpf) {
+    y = paragrafo(doc,
+      `AVALISTA: ${dados.clienteRepresentanteNome}, inscrito(a) no CPF sob o nº ${formatarCpfCnpj(dados.clienteRepresentanteCpf)}, representante legal do CEDENTE, doravante denominado(a) simplesmente "AVALISTA".`,
+      y, L, W);
+  }
+
+  y = secao(doc, 'CLÁUSULA PRIMEIRA – DO OBJETO DA PRORROGAÇÃO', y, L);
+  y = paragrafo(doc,
+    `1.1. Pelo presente instrumento, as partes acordam a prorrogação do prazo de vencimento do ${dados.tituloTipo.toLowerCase()} de nº ${dados.tituloNumero}, emitido por ${dados.emitenteNome} (CPF/CNPJ: ${formatarCpfCnpj(dados.emitenteCpfCnpj)}), sacado contra ${dados.sacadoNome} (CPF/CNPJ: ${formatarCpfCnpj(dados.sacadoCpfCnpj)}).`,
+    y, L, W);
+
+  y = secao(doc, 'CLÁUSULA SEGUNDA – DAS CONDIÇÕES DA PRORROGAÇÃO', y, L);
+
+  autoTable(doc, {
+    startY: y,
+    margin: { left: L, right: L },
+    head: [['Descrição', 'Valor']],
+    body: [
+      ['Vencimento original', dados.dataVencAnterior],
+      ['Novo vencimento', dados.dataVencNova],
+      [`Taxa de prorrogação (% a.m.)`, `${dados.taxaCliente.toFixed(4)}%`],
+      ['Encargo de prorrogação', `R$ ${dados.encargoProrrogacao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`],
+    ],
+    styles: { fontSize: 8.5, cellPadding: 3 },
+    headStyles: { fillColor: [15, 23, 42], textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
+    alternateRowStyles: { fillColor: [245, 248, 255] },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 120 }, 1: { halign: 'right' } },
+  });
+
+  y = (doc as any).lastAutoTable.finalY + 6;
+
+  y = paragrafo(doc,
+    `2.1. O prazo de vencimento do título supracitado fica prorrogado para ${dados.dataVencNova}, mediante o pagamento do encargo de prorrogação no valor de R$ ${dados.encargoProrrogacao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}, calculado à taxa de ${dados.taxaCliente.toFixed(4)}% ao mês sobre o valor nominal do título, pelo período compreendido entre o vencimento original e a nova data de vencimento.`,
+    y, L, W);
+  y = paragrafo(doc,
+    '2.2. O encargo de prorrogação deverá ser pago pelo CEDENTE à CESSIONÁRIA na data de assinatura deste instrumento, ou conforme acordado entre as partes.',
+    y, L, W);
+
+  y = secao(doc, 'CLÁUSULA TERCEIRA – MANUTENÇÃO DAS DEMAIS CLÁUSULAS', y, L);
+  y = paragrafo(doc,
+    '3.1. Exceto pela alteração da data de vencimento e pelo encargo de prorrogação ora estabelecidos, todas as demais cláusulas e condições do contrato de fomento mercantil original permanecem inalteradas, incluindo as garantias, as declarações do CEDENTE e o foro de eleição.',
+    y, L, W);
+  if (dados.clienteRepresentanteNome && dados.clienteRepresentanteCpf) {
+    y = paragrafo(doc,
+      `3.2. O AVALISTA ${dados.clienteRepresentanteNome}, CPF ${formatarCpfCnpj(dados.clienteRepresentanteCpf)}, ratifica neste ato o aval prestado no instrumento original, estendendo sua garantia solidária à nova data de vencimento aqui pactuada.`,
+      y, L, W);
+  }
+
+  y = secao(doc, 'CLÁUSULA QUARTA – DO FORO', y, L);
+  y = paragrafo(doc,
+    `4.1. As partes elegem, de forma irrevogável, o foro da ${EMPRESA.foro} para dirimir quaisquer questões oriundas deste instrumento.`,
+    y, L, W);
+
+  // Assinaturas
+  if (y > 200) { doc.addPage(); y = 22; }
+  y += 10;
+  doc.setDrawColor(180, 190, 210);
+  doc.setLineWidth(0.3);
+  doc.line(L, y, 210 - L, y);
+  y += 8;
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(60, 60, 80);
+  doc.text(`Imperatriz – MA, ${dataAtualPorExtenso()}`, L, y);
+  y += 18;
+
+  doc.line(L, y, L + 78, y);
+  doc.line(112, y, 112 + 78, y);
+  y += 6;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(15, 23, 42);
+  doc.text(EMPRESA.razaoSocial, L, y, { maxWidth: 78 });
+  doc.text(dados.clienteNome ?? dados.emitenteNome, 112, y, { maxWidth: 78 });
+  y += 5;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(110, 110, 130);
+  doc.text(`CNPJ: ${EMPRESA.cnpj}`, L, y);
+  doc.text(`CPF/CNPJ: ${formatarCpfCnpj(dados.emitenteCpfCnpj)}`, 112, y);
+  y += 5;
+  doc.text('CESSIONÁRIA', L, y);
+  doc.text('CEDENTE', 112, y);
+  y += 16;
+
+  if (dados.clienteRepresentanteNome && dados.clienteRepresentanteCpf) {
+    const avProrr = addPage(doc, y + 20);
+    y = avProrr.y;
+    doc.line(L, y, L + 78, y);
+    y += 6;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(15, 23, 42);
+    doc.text(dados.clienteRepresentanteNome, L, y, { maxWidth: 78 });
+    y += 5;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(110, 110, 130);
+    doc.text(`CPF: ${formatarCpfCnpj(dados.clienteRepresentanteCpf)}`, L, y);
+    y += 5;
+    doc.text('AVALISTA / REPRESENTANTE LEGAL', L, y);
+    y += 16;
+  }
+
+  doc.setTextColor(100, 100, 120); doc.setFontSize(7.5);
+  doc.text('Testemunha 1:', L, y); doc.text('Testemunha 2:', 112, y);
+  y += 5;
+  doc.line(L, y, L + 78, y); doc.line(112, y, 112 + 78, y);
+  y += 5;
+  doc.text('Nome: _________________________________', L, y); doc.text('Nome: _________________________________', 112, y);
+  y += 5;
+  doc.text('CPF: __________________________________', L, y); doc.text('CPF: __________________________________', 112, y);
+
+  const totalPags = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPags; i++) {
+    doc.setPage(i);
+    doc.setFillColor(15, 23, 42);
+    doc.rect(0, 284, 210, 13, 'F');
+    doc.setFontSize(6.5);
+    doc.setTextColor(160, 175, 210);
+    doc.text(`${EMPRESA.razaoSocial}  ·  CNPJ ${EMPRESA.cnpj}  ·  ${EMPRESA.email}`, 105, 289, { align: 'center' });
+    doc.text(`Prorrogação — Título nº ${dados.tituloNumero}  —  Página ${i} de ${totalPags}`, 105, 294, { align: 'center' });
+  }
+
+  doc.save(`prorrogacao-${dados.tituloNumero}.pdf`);
 }
 
 export async function gerarDocumentosTitulosPDF(

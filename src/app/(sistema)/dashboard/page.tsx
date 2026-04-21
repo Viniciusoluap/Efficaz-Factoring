@@ -13,6 +13,17 @@ async function getDashboardData() {
   const inicioMes = startOfMonth(hoje);
   const fimMes = endOfMonth(hoje);
 
+  // Auto-mark overdue titles as VENCIDO
+  try {
+    await prisma.titulo.updateMany({
+      where: {
+        status: { in: [TituloStatus.PENDENTE, TituloStatus.APROVADO] },
+        dataVencimento: { lt: new Date(hoje.toDateString()) },
+      },
+      data: { status: TituloStatus.VENCIDO },
+    });
+  } catch {}
+
   const [
     totalTitulos, custodiado, antecipado, vencimentosHoje,
     vencidos, spreadMes, impostoMes, totalClientes, totalFornecedores,
@@ -29,8 +40,11 @@ async function getDashboardData() {
     }),
     prisma.titulo.count({
       where: {
-        dataVencimento: { gte: new Date(hoje.toDateString()), lt: new Date(new Date(hoje.toDateString()).getTime() + 86400000) },
-        status: TituloStatus.APROVADO,
+        dataVencimento: {
+          gte: new Date(hoje.toDateString()),
+          lt: new Date(new Date(hoje.toDateString()).getTime() + 86400000),
+        },
+        status: { in: [TituloStatus.APROVADO, TituloStatus.PENDENTE] },
       },
     }),
     prisma.titulo.count({ where: { status: TituloStatus.VENCIDO } }),

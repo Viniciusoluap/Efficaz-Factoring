@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
   if (fornecedorId) whereGeral.fornecedorId = fornecedorId;
   if (statusParam) whereGeral.status = statusParam;
 
-  const [totaisGeral, totaisPeriodo, porTipo, titulos, clientes, fornecedores, config] = await Promise.all([
+  const [totaisGeral, totaisPeriodo, porTipo, titulos, clientes, fornecedores] = await Promise.all([
     prisma.titulo.aggregate({
       _sum: { valor: true, encargo: true, spreadBruto: true, impostoProvisao: true, spreadLiquido: true, valorLiquidoCliente: true, baseEspelho: true },
       _count: { id: true },
@@ -66,8 +66,27 @@ export async function GET(req: NextRequest) {
     }),
     prisma.cliente.findMany({ orderBy: { nome: 'asc' }, select: { id: true, nome: true } }),
     prisma.fornecedor.findMany({ orderBy: { nome: 'asc' }, select: { id: true, nome: true } }),
-    prisma.configuracao.findUnique({ where: { id: 'default' }, select: { aliquotaImposto: true } }),
   ]);
 
-  return NextResponse.json({ totaisGeral, totaisPeriodo, porTipo, titulos, clientes, fornecedores, config });
+  let config: any = null;
+  try {
+    const cfgRows = await prisma.$queryRaw<any[]>`SELECT * FROM configuracoes WHERE id = 'default'`;
+    config = cfgRows[0] ?? null;
+  } catch {}
+
+  // Total de prorrogações do período (tabela criada dinamicamente — ignora se não existir)
+  let totalProrrogacoes = 0;
+  try {
+    const tituloIds: string[] = (titulos as any[]).map((t: any) => t.id);
+    if (tituloIds.length > 0) {
+      const rows = await prisma.$queryRaw<{ total: string }[]>`
+        SELECT COALESCE(SUM("encargoProrrogacao"), 0)::text AS total
+        FROM prorrogacoes
+        WHERE "tituloId" = ANY(${tituloIds}::text[])
+      `;
+      totalProrrogacoes = parseFloat(rows[0]?.total ?? '0');
+    }
+  } catch {}
+
+  return NextResponse.json({ totaisGeral, totaisPeriodo, porTipo, titulos, clientes, fornecedores, config, totalProrrogacoes });
 }
