@@ -35,6 +35,9 @@ export type TituloTabela = TituloDocumentoItem & {
   status: string;
   sacadoCpfCnpj: string;
   spreadBruto: number;
+  taxaCliente: number;
+  taxaFornecedor: number;
+  dataVencimentoISO: string;
 };
 
 type Totais = {
@@ -51,9 +54,11 @@ type Props = {
   operacaoNumero: string;
   clienteNome?: string;
   clienteCpfCnpj?: string;
+  clienteRepresentanteNome?: string;
+  clienteRepresentanteCpf?: string;
 };
 
-export default function TitulosSelecionaveis({ titulos, totais, operacaoId, operacaoNumero, clienteNome, clienteCpfCnpj }: Props) {
+export default function TitulosSelecionaveis({ titulos, totais, operacaoId, operacaoNumero, clienteNome, clienteCpfCnpj, clienteRepresentanteNome, clienteRepresentanteCpf }: Props) {
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [loadingPdf, setLoadingPdf] = useState(false);
   const [loadingEmail, setLoadingEmail] = useState(false);
@@ -284,7 +289,24 @@ export default function TitulosSelecionaveis({ titulos, totais, operacaoId, oper
                       </div>
                     </td>
                     <td className="px-2 py-2">
-                      <TituloNaOperacaoAcoes tituloId={t.id} />
+                      <TituloNaOperacaoAcoes
+                        tituloId={t.id}
+                        tituloNumero={t.numero}
+                        tituloTipo={t.tipo}
+                        valor={t.valor}
+                        taxaClienteAtual={t.taxaCliente}
+                        taxaFornecedorAtual={t.taxaFornecedor}
+                        dataVencimentoAtual={t.dataVencimento}
+                        dataVencimentoISO={t.dataVencimentoISO}
+                        emitenteNome={t.emitenteNome}
+                        emitenteCpfCnpj={t.emitenteCpfCnpj}
+                        sacadoNome={t.sacadoNome}
+                        sacadoCpfCnpj={t.sacadoCpfCnpj}
+                        status={t.status}
+                        clienteNome={clienteNome}
+                        clienteRepresentanteNome={clienteRepresentanteNome}
+                        clienteRepresentanteCpf={clienteRepresentanteCpf}
+                      />
                     </td>
                   </tr>
                 );

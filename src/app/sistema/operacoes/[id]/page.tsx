@@ -79,12 +79,15 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
     emitenteNome: t.emitenteNome,
     emitenteCpfCnpj: t.emitenteCpfCnpj,
     dataVencimento: format(new Date(t.dataVencimento), 'dd/MM/yyyy'),
+    dataVencimentoISO: format(new Date(t.dataVencimento), 'yyyy-MM-dd'),
     dataEmissao: format(new Date(t.dataEmissao), 'dd/MM/yyyy'),
     prazo: t.prazo,
     valor: Number(t.valor),
     encargo: Number(t.encargo),
     valorLiquidoCliente: Number(t.valorLiquidoCliente),
     spreadBruto: Number(t.spreadBruto),
+    taxaCliente: Number(t.taxaCliente),
+    taxaFornecedor: Number(t.taxaFornecedor),
   }));
 
   const titulosPDF = operacao.titulos.map(t => ({
@@ -210,6 +213,8 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
         operacaoNumero={operacao.numero}
         clienteNome={operacao.cliente?.nome}
         clienteCpfCnpj={operacao.cliente?.cpfCnpj}
+        clienteRepresentanteNome={operacao.cliente?.representanteNome ?? undefined}
+        clienteRepresentanteCpf={operacao.cliente?.representanteCpf ?? undefined}
       />
 
       {operacao.observacoes && (

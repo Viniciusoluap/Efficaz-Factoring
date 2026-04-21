@@ -4,12 +4,46 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Pencil, Trash2, Loader2, AlertTriangle } from 'lucide-react';
+import ProrrogarBtn from './ProrrogarBtn';
+import PagamentoParcialBtn from './PagamentoParcialBtn';
+
+type Props = {
+  tituloId: string;
+  tituloNumero: string;
+  tituloTipo: string;
+  valor: number;
+  taxaClienteAtual: number;
+  taxaFornecedorAtual: number;
+  dataVencimentoAtual: string;
+  dataVencimentoISO: string;
+  emitenteNome: string;
+  emitenteCpfCnpj: string;
+  sacadoNome: string;
+  sacadoCpfCnpj: string;
+  status: string;
+  clienteNome?: string;
+  clienteRepresentanteNome?: string;
+  clienteRepresentanteCpf?: string;
+};
 
 export default function TituloNaOperacaoAcoes({
   tituloId,
-}: {
-  tituloId: string;
-}) {
+  tituloNumero,
+  tituloTipo,
+  valor,
+  taxaClienteAtual,
+  taxaFornecedorAtual,
+  dataVencimentoAtual,
+  dataVencimentoISO,
+  emitenteNome,
+  emitenteCpfCnpj,
+  sacadoNome,
+  sacadoCpfCnpj,
+  status,
+  clienteNome,
+  clienteRepresentanteNome,
+  clienteRepresentanteCpf,
+}: Props) {
   const router = useRouter();
   const [confirmando, setConfirmando] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -21,6 +55,8 @@ export default function TituloNaOperacaoAcoes({
     setConfirmando(false);
     router.refresh();
   };
+
+  const podeOperar = status === 'APROVADO' || status === 'PENDENTE' || status === 'VENCIDO';
 
   if (confirmando) {
     return (
@@ -45,7 +81,29 @@ export default function TituloNaOperacaoAcoes({
   }
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1 flex-wrap">
+      {podeOperar && (
+        <>
+          <ProrrogarBtn
+            tituloId={tituloId}
+            tituloNumero={tituloNumero}
+            tituloTipo={tituloTipo}
+            valor={valor}
+            taxaClienteAtual={taxaClienteAtual}
+            taxaFornecedorAtual={taxaFornecedorAtual}
+            dataVencimentoAtual={dataVencimentoAtual}
+            dataVencimentoISO={dataVencimentoISO}
+            emitenteNome={emitenteNome}
+            emitenteCpfCnpj={emitenteCpfCnpj}
+            sacadoNome={sacadoNome}
+            sacadoCpfCnpj={sacadoCpfCnpj}
+            clienteNome={clienteNome}
+            clienteRepresentanteNome={clienteRepresentanteNome}
+            clienteRepresentanteCpf={clienteRepresentanteCpf}
+          />
+          <PagamentoParcialBtn tituloId={tituloId} valorAtual={valor} />
+        </>
+      )}
       <Link
         href={`/sistema/titulos/${tituloId}/editar`}
         className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
