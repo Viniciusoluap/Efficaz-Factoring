@@ -23,9 +23,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Arquivo muito grande. Máximo 2MB por arquivo.' }, { status: 413 });
   }
 
-  const ext = file.name.split('.').pop() ?? 'bin';
+  const ext = (file.name.split('.').pop() ?? 'bin').toLowerCase();
   const filename = `${pasta}/${userId}/${Date.now()}.${ext}`;
-  const contentType = file.type || 'application/octet-stream';
+  const mimeByExt: Record<string, string> = {
+    pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+    png: 'image/png', gif: 'image/gif', webp: 'image/webp',
+    bmp: 'image/bmp', tiff: 'image/tiff', tif: 'image/tiff',
+  };
+  const contentType = file.type && file.type !== 'application/octet-stream'
+    ? file.type
+    : (mimeByExt[ext] ?? 'application/octet-stream');
 
   // Try Vercel Blob first; fall back to base64 data URI if not configured
   try {

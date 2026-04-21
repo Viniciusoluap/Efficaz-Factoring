@@ -5,12 +5,15 @@ import { calcularOperacao, calcularFiscal, calcularDataD2 } from '@/lib/calculos
 import { differenceInDays } from 'date-fns';
 import { randomUUID } from 'crypto';
 
+const parseDate = (s: string) => new Date(s.includes('T') ? s : s + 'T12:00:00.000Z');
+
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   if (!token) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
 
   try {
-    const { novaData, taxaCliente } = await req.json();
+    const body = await req.json();
+    const { novaData, taxaCliente, taxaFornecedor: taxaFornecedorProrr = 0 } = body;
     if (!novaData || !taxaCliente) {
       return NextResponse.json({ error: 'Nova data e taxa são obrigatórias.' }, { status: 400 });
     }
@@ -22,30 +25,34 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (!titulo) return NextResponse.json({ error: 'Título não encontrado.' }, { status: 404 });
 
     const dataVencAnterior = new Date(titulo.dataVencimento);
-    const dataVencNova = new Date(novaData + 'T00:00:00');
+    const dataVencNova = parseDate(novaData);
 
     if (dataVencNova <= dataVencAnterior) {
       return NextResponse.json({ error: 'Nova data deve ser posterior ao vencimento atual.' }, { status: 400 });
     }
 
     const taxaClienteNum = parseFloat(String(taxaCliente));
+    const taxaFornecedorNum = parseFloat(String(taxaFornecedorProrr)) || 0;
     const valor = Number(titulo.valor);
 
-    // Encargo de prorrogação: do vencimento anterior ao novo vencimento (com D+2)
     const dataD2Prorrogacao = calcularDataD2(dataVencNova);
     const prazoProrrogacao = differenceInDays(dataD2Prorrogacao, dataVencAnterior);
     let encargoProrrogacao = ((valor * (taxaClienteNum / 100)) / 30) * prazoProrrogacao;
     if (encargoProrrogacao < 50) encargoProrrogacao = 50;
     encargoProrrogacao = Math.round(encargoProrrogacao * 100) / 100;
 
-    // Recalcular o título completo com a nova data
     let config: any = null;
-    try { config = await prisma.configuracao.findUnique({ where: { id: 'default' } }); } catch {}
+    try {
+      const rows = await prisma.$queryRaw<any[]>`SELECT * FROM configuracoes WHERE id = 'default'`;
+      config = rows[0] ?? null;
+    } catch {}
+
+    const taxaFornFinal = taxaFornecedorNum > 0 ? taxaFornecedorNum : Number(titulo.taxaFornecedor);
 
     const novoResultado = calcularOperacao({
       valor,
       taxaCliente: taxaClienteNum,
-      taxaFornecedor: Number(titulo.taxaFornecedor),
+      taxaFornecedor: taxaFornFinal,
       dataEmissao: new Date(titulo.dataEmissao),
       dataVencimento: dataVencNova,
     });
@@ -56,7 +63,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       Number(config?.aliquotaImposto ?? 38.63),
     );
 
-    // Criar tabela se não existir
     try {
       await prisma.$executeRaw`
         CREATE TABLE IF NOT EXISTS prorrogacoes (
@@ -86,6 +92,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         data: {
           dataVencimento: dataVencNova,
           taxaCliente: taxaClienteNum,
+          taxaFornecedor: taxaFornFinal,
           prazo: novoResultado.prazo,
           encargo: novoResultado.encargo,
           valorLiquidoCliente: novoResultado.valorLiquidoCliente,

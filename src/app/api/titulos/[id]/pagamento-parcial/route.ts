@@ -27,7 +27,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const novoValor = Math.round((valorAtual - pgtoNum) * 100) / 100;
 
     let config: any = null;
-    try { config = await prisma.configuracao.findUnique({ where: { id: 'default' } }); } catch {}
+    try {
+      const rows = await prisma.$queryRaw`SELECT * FROM configuracoes WHERE id = 'default'`;
+      config = rows[0] ?? null;
+    } catch {}
 
     const resultado = calcularOperacao({
       valor: novoValor,

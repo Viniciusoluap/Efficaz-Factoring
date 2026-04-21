@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { calcularOperacao, calcularFiscal } from '@/lib/calculos';
 
+const parseDate = (s: string) => new Date(s.includes('T') ? s : s + 'T12:00:00.000Z');
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
@@ -32,22 +34,27 @@ export async function POST(req: NextRequest) {
     }
 
     let config: any = null;
-    try { config = await prisma.configuracao.findUnique({ where: { id: 'default' } }); } catch {}
+    try {
+      const rows = await prisma.$queryRaw<any[]>`SELECT * FROM configuracoes WHERE id = 'default'`;
+      config = rows[0] ?? null;
+    } catch {}
 
     const criarTituloData = async (tx: any, opId: string, t: any) => {
+      const dEmissao = parseDate(t.dataEmissao);
+      const dVencimento = parseDate(t.dataVencimento);
       const resultado = calcularOperacao({
         valor: parseFloat(t.valor),
         taxaCliente: parseFloat(taxaCliente),
         taxaFornecedor: parseFloat(taxaFornecedor),
-        dataEmissao: new Date(t.dataEmissao),
-        dataVencimento: new Date(t.dataVencimento),
+        dataEmissao: dEmissao,
+        dataVencimento: dVencimento,
       });
       const fiscal = calcularFiscal(
         resultado,
         parseFloat(t.valor),
         resultado.prazoEfetivo,
         Number(config?.taxaMinimaFiscal ?? 0.5),
-        Number(config?.aliquotaImposto ?? 15),
+        Number(config?.aliquotaImposto ?? 38.63),
       );
       await tx.titulo.create({
         data: {
@@ -58,8 +65,8 @@ export async function POST(req: NextRequest) {
           emitenteNome: t.emitenteNome,
           sacadoCpfCnpj: t.sacadoCpfCnpj,
           sacadoNome: t.sacadoNome,
-          dataEmissao: new Date(t.dataEmissao),
-          dataVencimento: new Date(t.dataVencimento),
+          dataEmissao: dEmissao,
+          dataVencimento: dVencimento,
           prazo: resultado.prazo,
           valor: parseFloat(t.valor),
           taxaCliente: parseFloat(taxaCliente),
@@ -79,7 +86,6 @@ export async function POST(req: NextRequest) {
       });
     };
 
-    // Adicionar a operação existente
     if (operacaoId) {
       const op = await prisma.operacao.findUnique({ where: { id: operacaoId } });
       if (!op) return NextResponse.json({ error: 'Operação não encontrada.' }, { status: 404 });
@@ -89,7 +95,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ id: operacaoId }, { status: 200 });
     }
 
-    // Criar nova operação
     const count = await prisma.operacao.count();
     const numero = `OP-${String(count + 1).padStart(5, '0')}`;
 

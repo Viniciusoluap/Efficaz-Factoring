@@ -997,7 +997,7 @@ function valorPorExtenso(valor: number): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function addRodapeDocumento(doc: jsPDF, total: number) {
+function addRodapeDocumento(doc: jsPDF, total: number, empresa = EMPRESA_DEFAULT) {
   for (let i = 1; i <= total; i++) {
     doc.setPage(i);
     doc.setFillColor(15, 23, 42);
@@ -1005,7 +1005,7 @@ function addRodapeDocumento(doc: jsPDF, total: number) {
     doc.setFontSize(6.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(160, 175, 210);
-    doc.text(`${EMPRESA.razaoSocial}  ·  CNPJ ${EMPRESA.cnpj}  ·  ${EMPRESA.email}  ·  ${EMPRESA.telefone}`,
+    doc.text(`${empresa.razaoSocial}  ·  CNPJ ${empresa.cnpj}  ·  ${empresa.email}  ·  ${empresa.telefone}`,
       105, 289, { align: 'center' });
     doc.text(`Página ${i} de ${total}`, 105, 294, { align: 'center' });
   }

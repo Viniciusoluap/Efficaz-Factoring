@@ -89,6 +89,7 @@ export default async function TituloDetalhePage({ params }: { params: { id: stri
             tituloTipo={titulo.tipo}
             valor={dados.valor}
             taxaClienteAtual={dados.taxaCliente}
+            taxaFornecedorAtual={dados.taxaFornecedor}
             dataVencimentoAtual={dados.dataVencimento}
             dataVencimentoISO={format(new Date(titulo.dataVencimento), 'yyyy-MM-dd')}
             emitenteNome={titulo.emitenteNome}

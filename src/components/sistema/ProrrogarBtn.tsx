@@ -13,6 +13,7 @@ type Props = {
   tituloTipo: string;
   valor: number;
   taxaClienteAtual: number;
+  taxaFornecedorAtual: number;
   dataVencimentoAtual: string; // dd/MM/yyyy
   dataVencimentoISO: string;   // yyyy-MM-dd
   emitenteNome: string;
@@ -37,19 +38,36 @@ export default function ProrrogarBtn(props: Props) {
   const [aberto, setAberto] = useState(false);
   const [novaData, setNovaData] = useState('');
   const [taxa, setTaxa] = useState(String(props.taxaClienteAtual));
+  const [taxaFornecedor, setTaxaFornecedor] = useState(String(props.taxaFornecedorAtual));
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState('');
   const [resultado, setResultado] = useState<{ encargoProrrogacao: number } | null>(null);
 
   const dataMin = format(addDays(new Date(props.dataVencimentoISO + 'T00:00:00'), 1), 'yyyy-MM-dd');
 
+  const taxaNum = parseFloat(taxa) || props.taxaClienteAtual;
+  const taxaFornecedorNum = parseFloat(taxaFornecedor) || 0;
+  const taxaEmpresaNum = Math.max(0, taxaNum - taxaFornecedorNum);
+
   const encargoPrev = novaData && taxa
     ? calcEncargo(
         props.valor,
-        parseFloat(taxa) || props.taxaClienteAtual,
+        taxaNum,
         new Date(props.dataVencimentoISO + 'T00:00:00'),
         new Date(novaData + 'T00:00:00'),
       )
+    : null;
+
+  const custoCedentePrev = encargoPrev !== null && novaData
+    ? (() => {
+        const d2 = calcularDataD2(new Date(novaData + 'T00:00:00'));
+        const prazo = differenceInDays(d2, new Date(props.dataVencimentoISO + 'T00:00:00'));
+        return Math.round(((props.valor * (taxaFornecedorNum / 100)) / 30) * prazo * 100) / 100;
+      })()
+    : null;
+
+  const spreadPrev = encargoPrev !== null && custoCedentePrev !== null
+    ? Math.round((encargoPrev - custoCedentePrev) * 100) / 100
     : null;
 
   const handleConfirmar = async () => {
@@ -59,7 +77,11 @@ export default function ProrrogarBtn(props: Props) {
       const res = await fetch(`/api/titulos/${props.tituloId}/prorrogar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ novaData, taxaCliente: parseFloat(taxa) }),
+        body: JSON.stringify({
+          novaData,
+          taxaCliente: parseFloat(taxa),
+          taxaFornecedor: taxaFornecedorNum,
+        }),
       });
       if (!res.ok) throw new Error((await res.json()).error ?? 'Erro ao prorrogar.');
       const data = await res.json();
@@ -95,6 +117,7 @@ export default function ProrrogarBtn(props: Props) {
     setResultado(null);
     setNovaData('');
     setTaxa(String(props.taxaClienteAtual));
+    setTaxaFornecedor(String(props.taxaFornecedorAtual));
     setErro('');
   };
 
@@ -134,16 +157,37 @@ export default function ProrrogarBtn(props: Props) {
                       onChange={e => setNovaData(e.target.value)} />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Taxa de Prorrogação (% a.m.) *</label>
-                    <input type="number" step="0.01" min="0.01" className={inputCls} value={taxa}
-                      onChange={e => setTaxa(e.target.value)} />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Taxa Cliente (% a.m.) *</label>
+                      <input type="number" step="0.01" min="0.01" className={inputCls} value={taxa}
+                        onChange={e => setTaxa(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Repasse Fornecedor (%)</label>
+                      <input type="number" step="0.01" min="0" className={inputCls} value={taxaFornecedor}
+                        onChange={e => setTaxaFornecedor(e.target.value)} />
+                    </div>
                   </div>
 
                   {encargoPrev !== null && (
-                    <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 flex justify-between items-center">
-                      <span className="text-sm text-amber-700 font-medium">Encargo de prorrogação</span>
-                      <span className="text-sm font-bold text-amber-800">{formatarMoeda(encargoPrev)}</span>
+                    <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 space-y-1.5">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-amber-700 font-medium">Encargo de prorrogação</span>
+                        <span className="text-sm font-bold text-amber-800">{formatarMoeda(encargoPrev)}</span>
+                      </div>
+                      {taxaFornecedorNum > 0 && custoCedentePrev !== null && (
+                        <>
+                          <div className="flex justify-between items-center text-xs text-gray-500">
+                            <span>Custo cedente ({taxaFornecedorNum.toFixed(2)}% forn.)</span>
+                            <span className="text-blue-600">− {formatarMoeda(custoCedentePrev)}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs font-semibold border-t border-amber-200 pt-1.5">
+                            <span className="text-amber-700">Spread Efficaz ({taxaEmpresaNum.toFixed(2)}%)</span>
+                            <span className="text-green-700">{formatarMoeda(spreadPrev ?? 0)}</span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
 
