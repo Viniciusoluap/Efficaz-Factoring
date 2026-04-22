@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
     pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg',
     png: 'image/png', gif: 'image/gif', webp: 'image/webp',
     bmp: 'image/bmp', tiff: 'image/tiff', tif: 'image/tiff',
+    heic: 'image/heic', heif: 'image/heif',
   };
   const contentType = file.type && file.type !== 'application/octet-stream'
     ? file.type
