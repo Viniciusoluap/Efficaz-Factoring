@@ -23,6 +23,7 @@ type Props = {
   clienteNome?: string;
   clienteRepresentanteNome?: string;
   clienteRepresentanteCpf?: string;
+  onSuccess?: () => void;
 };
 
 function calcEncargo(valor: number, taxa: number, dataVencAnterior: Date, dataVencNova: Date): number {
@@ -112,7 +113,7 @@ export default function ProrrogarBtn(props: Props) {
   };
 
   const handleFechar = () => {
-    if (resultado) router.refresh();
+    if (resultado) { router.refresh(); props.onSuccess?.(); }
     setAberto(false);
     setResultado(null);
     setNovaData('');

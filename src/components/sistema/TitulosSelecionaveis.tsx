@@ -35,9 +35,6 @@ export type TituloTabela = TituloDocumentoItem & {
   status: string;
   sacadoCpfCnpj: string;
   spreadBruto: number;
-  taxaCliente: number;
-  taxaFornecedor: number;
-  dataVencimentoISO: string;
 };
 
 type Totais = {
@@ -56,9 +53,10 @@ type Props = {
   clienteCpfCnpj?: string;
   clienteRepresentanteNome?: string;
   clienteRepresentanteCpf?: string;
+  isPaga?: boolean;
 };
 
-export default function TitulosSelecionaveis({ titulos, totais, operacaoId, operacaoNumero, clienteNome, clienteCpfCnpj, clienteRepresentanteNome, clienteRepresentanteCpf }: Props) {
+export default function TitulosSelecionaveis({ titulos, totais, operacaoId, operacaoNumero, clienteNome, clienteCpfCnpj, clienteRepresentanteNome, clienteRepresentanteCpf, isPaga }: Props) {
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [loadingPdf, setLoadingPdf] = useState(false);
   const [loadingEmail, setLoadingEmail] = useState(false);
@@ -155,12 +153,14 @@ export default function TitulosSelecionaveis({ titulos, totais, operacaoId, oper
             </span>
           )}
         </div>
-        <Link
-          href={`/sistema/titulos/novo?operacaoId=${operacaoId}`}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl transition-colors"
-        >
-          <Plus className="w-3.5 h-3.5" /> Adicionar Título
-        </Link>
+        {!isPaga && (
+          <Link
+            href={`/sistema/titulos/novo?operacaoId=${operacaoId}`}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" /> Adicionar Título
+          </Link>
+        )}
       </div>
 
       {/* Barra de ações flutuante quando há selecionados */}
@@ -289,24 +289,7 @@ export default function TitulosSelecionaveis({ titulos, totais, operacaoId, oper
                       </div>
                     </td>
                     <td className="px-2 py-2">
-                      <TituloNaOperacaoAcoes
-                        tituloId={t.id}
-                        tituloNumero={t.numero}
-                        tituloTipo={t.tipo}
-                        valor={t.valor}
-                        taxaClienteAtual={t.taxaCliente}
-                        taxaFornecedorAtual={t.taxaFornecedor}
-                        dataVencimentoAtual={t.dataVencimento}
-                        dataVencimentoISO={t.dataVencimentoISO}
-                        emitenteNome={t.emitenteNome}
-                        emitenteCpfCnpj={t.emitenteCpfCnpj}
-                        sacadoNome={t.sacadoNome}
-                        sacadoCpfCnpj={t.sacadoCpfCnpj}
-                        status={t.status}
-                        clienteNome={clienteNome}
-                        clienteRepresentanteNome={clienteRepresentanteNome}
-                        clienteRepresentanteCpf={clienteRepresentanteCpf}
-                      />
+                      <TituloNaOperacaoAcoes tituloId={t.id} operacaoPaga={isPaga} />
                     </td>
                   </tr>
                 );
