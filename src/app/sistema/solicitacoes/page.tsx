@@ -157,31 +157,22 @@ export default function SolicitacoesPage() {
     heic: 'image/heic', heif: 'image/heif', bmp: 'image/bmp', tiff: 'image/tiff',
   };
 
-  const downloadAnexo = async (url: string, filename: string) => {
+  const downloadAnexo = (url: string, filename: string) => {
     if (url.startsWith('data:')) {
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
+      // Data URI: convert to blob URL and open in new tab (funciona no iOS)
+      const match = url.match(/^data:([^;]+);base64,(.+)$/);
+      if (match) {
+        const mime = match[1];
+        const bytes = Uint8Array.from(atob(match[2]), c => c.charCodeAt(0));
+        const blob = new Blob([bytes], { type: mime });
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+      }
       return;
     }
-    try {
-      const res = await fetch(url);
-      const rawBlob = await res.blob();
-      const ext = filename.split('.').pop()?.toLowerCase() ?? '';
-      const mime = MIME_BY_EXT[ext] ?? rawBlob.type;
-      const blob = mime && mime !== rawBlob.type ? new Blob([rawBlob], { type: mime }) : rawBlob;
-      const objectUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = objectUrl;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 2000);
-    } catch {
-      window.open(url, '_blank');
-    }
+    // Vercel Blob: usar proxy server-side para MIME/nome corretos em todos os devices
+    window.open(`/api/download?url=${encodeURIComponent(url)}&name=${encodeURIComponent(filename)}`, '_blank');
   };
 
   const naoLidas = avulsas.filter(s => !s.lida).length;
