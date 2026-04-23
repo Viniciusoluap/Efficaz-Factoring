@@ -146,6 +146,35 @@ export default function SolicitacoesPage() {
     setConfirmDeleteCliente(null);
   };
 
+  const EXT_BY_MIME: Record<string, string> = {
+    'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png',
+    'image/gif': 'gif', 'image/webp': 'webp', 'image/heic': 'heic',
+    'image/heif': 'heif', 'image/bmp': 'bmp', 'image/tiff': 'tiff',
+  };
+  const MIME_BY_EXT: Record<string, string> = {
+    pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+    png: 'image/png', gif: 'image/gif', webp: 'image/webp',
+    heic: 'image/heic', heif: 'image/heif', bmp: 'image/bmp', tiff: 'image/tiff',
+  };
+
+  const downloadAnexo = (url: string, filename: string) => {
+    if (url.startsWith('data:')) {
+      // Data URI: convert to blob URL and open in new tab (funciona no iOS)
+      const match = url.match(/^data:([^;]+);base64,(.+)$/);
+      if (match) {
+        const mime = match[1];
+        const bytes = Uint8Array.from(atob(match[2]), c => c.charCodeAt(0));
+        const blob = new Blob([bytes], { type: mime });
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+      }
+      return;
+    }
+    // Vercel Blob: usar proxy server-side para MIME/nome corretos em todos os devices
+    window.open(`/api/download?url=${encodeURIComponent(url)}&name=${encodeURIComponent(filename)}`, '_blank');
+  };
+
   const naoLidas = avulsas.filter(s => !s.lida).length;
   const novasClientes = clienteSols.filter(s => s.status === 'AGUARDANDO').length;
 
@@ -431,24 +460,20 @@ export default function SolicitacoesPage() {
                         <div className="flex flex-wrap gap-2">
                           {selecionadaCliente.anexos.map((url, i) => {
                             const isDataUri = url.startsWith('data:');
-                            const mime = isDataUri ? (url.match(/^data:([^;]+);/)?.[1] ?? '') : '';
-                            const isPdf = mime === 'application/pdf' || url.toLowerCase().includes('.pdf');
+                            const dataMime = isDataUri ? (url.match(/^data:([^;]+);/)?.[1] ?? '') : '';
+                            const urlExt = !isDataUri ? (url.split('?')[0].split('.').pop()?.toLowerCase() ?? '') : '';
+                            const mime = dataMime || MIME_BY_EXT[urlExt] || '';
+                            const ext = EXT_BY_MIME[mime] || urlExt || (isDataUri ? 'bin' : '');
+                            const isPdf = ext === 'pdf';
                             const isImage = mime.startsWith('image/');
-                            const extMap: Record<string, string> = {
-                              'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif',
-                              'image/webp': 'webp', 'application/pdf': 'pdf',
-                            };
-                            const ext = isPdf ? 'pdf' : (extMap[mime] ?? (isDataUri ? 'bin' : ''));
-                            const downloadName = isDataUri ? `anexo-${i + 1}${ext ? '.' + ext : ''}` : undefined;
+                            const downloadName = `anexo-${i + 1}${ext ? '.' + ext : ''}`;
                             return (
-                              <a key={i} href={url}
-                                {...(isDataUri
-                                  ? { download: downloadName }
-                                  : { target: '_blank', rel: 'noopener noreferrer' })}
+                              <button key={i}
+                                onClick={() => downloadAnexo(url, downloadName)}
                                 className="flex items-center gap-1.5 text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-100 px-3 py-2 rounded-xl transition-colors">
                                 {isPdf ? <FileText className="w-4 h-4" /> : <ImageIcon className="w-4 h-4" />}
                                 {isPdf ? `PDF ${i + 1}` : isImage ? `Imagem ${i + 1}` : `Arquivo ${i + 1}`}
-                              </a>
+                              </button>
                             );
                           })}
                         </div>

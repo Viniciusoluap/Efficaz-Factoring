@@ -7,12 +7,16 @@ import { Pencil, Trash2, Loader2, AlertTriangle } from 'lucide-react';
 
 export default function TituloNaOperacaoAcoes({
   tituloId,
+  operacaoPaga,
 }: {
   tituloId: string;
+  operacaoPaga?: boolean;
 }) {
   const router = useRouter();
   const [confirmando, setConfirmando] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  if (operacaoPaga) return null;
 
   const excluir = async () => {
     setLoading(true);

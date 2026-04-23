@@ -127,8 +127,7 @@ export default function PortalConfiguracoesPage() {
         <input
           ref={fotoInputRef}
           type="file"
-          accept="image/*"
-          capture="environment"
+          accept="image/*,.heic,.heif"
           className="hidden"
           onChange={handleFotoChange}
         />

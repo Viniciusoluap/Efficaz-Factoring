@@ -140,6 +140,7 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
           titulosFornecedor={titulosFornecedor}
           titulosXLS={titulosXLS}
           operacaoId={operacao.id}
+          isPaga={isPaga}
         />
       </div>
 
@@ -210,6 +211,9 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
         operacaoNumero={operacao.numero}
         clienteNome={operacao.cliente?.nome}
         clienteCpfCnpj={operacao.cliente?.cpfCnpj}
+        clienteRepresentanteNome={operacao.cliente?.representanteNome ?? undefined}
+        clienteRepresentanteCpf={operacao.cliente?.representanteCpf ?? undefined}
+        isPaga={isPaga}
       />
 
       {operacao.observacoes && (

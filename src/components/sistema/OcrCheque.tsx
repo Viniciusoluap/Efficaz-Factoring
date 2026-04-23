@@ -128,8 +128,7 @@ export default function OcrCheque({
           <input
             ref={inputRef}
             type="file"
-            accept="image/*"
-            capture="environment"
+            accept="image/*,.heic,.heif"
             className="hidden"
             onChange={(e) => e.target.files?.[0] && handleArquivo(e.target.files[0])}
           />

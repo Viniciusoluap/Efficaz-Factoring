@@ -36,9 +36,10 @@ type Props = {
   titulosFornecedor: TituloFornecedorPDF[];
   titulosXLS: TituloXLS[];
   operacaoId: string;
+  isPaga?: boolean;
 };
 
-export default function OperacaoAcoes({ operacao, titulosPDF, titulosFornecedor, titulosXLS, operacaoId }: Props) {
+export default function OperacaoAcoes({ operacao, titulosPDF, titulosFornecedor, titulosXLS, operacaoId, isPaga }: Props) {
   const router = useRouter();
   const [loadingPdf, setLoadingPdf] = useState(false);
   const [loadingPdfForn, setLoadingPdfForn] = useState(false);
@@ -116,33 +117,35 @@ export default function OperacaoAcoes({ operacao, titulosPDF, titulosFornecedor,
         Exportar XLS
       </button>
 
-      {confirmando ? (
-        <div className="flex items-center gap-1.5">
-          <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
-          <span className="text-xs text-red-600 font-medium">Excluir operação?</span>
+      {!isPaga && (
+        confirmando ? (
+          <div className="flex items-center gap-1.5">
+            <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+            <span className="text-xs text-red-600 font-medium">Excluir operação?</span>
+            <button
+              onClick={excluirOperacao}
+              disabled={loadingDel}
+              className="inline-flex items-center gap-1 text-xs text-white bg-red-600 hover:bg-red-700 px-2.5 py-1.5 rounded-lg font-semibold disabled:opacity-60"
+            >
+              {loadingDel && <Loader2 className="w-3 h-3 animate-spin" />}
+              Excluir
+            </button>
+            <button
+              onClick={() => setConfirmando(false)}
+              className="text-xs text-gray-500 hover:text-gray-700 px-2.5 py-1.5 rounded-lg font-medium"
+            >
+              Cancelar
+            </button>
+          </div>
+        ) : (
           <button
-            onClick={excluirOperacao}
-            disabled={loadingDel}
-            className="inline-flex items-center gap-1 text-xs text-white bg-red-600 hover:bg-red-700 px-2.5 py-1.5 rounded-lg font-semibold disabled:opacity-60"
+            onClick={() => setConfirmando(true)}
+            className="inline-flex items-center gap-1.5 bg-gray-100 hover:bg-red-50 text-gray-500 hover:text-red-600 text-xs font-semibold px-3 py-2 rounded-xl transition-colors shadow-sm"
           >
-            {loadingDel && <Loader2 className="w-3 h-3 animate-spin" />}
-            Excluir
+            <Trash2 className="w-3.5 h-3.5" />
+            Excluir Operação
           </button>
-          <button
-            onClick={() => setConfirmando(false)}
-            className="text-xs text-gray-500 hover:text-gray-700 px-2.5 py-1.5 rounded-lg font-medium"
-          >
-            Cancelar
-          </button>
-        </div>
-      ) : (
-        <button
-          onClick={() => setConfirmando(true)}
-          className="inline-flex items-center gap-1.5 bg-gray-100 hover:bg-red-50 text-gray-500 hover:text-red-600 text-xs font-semibold px-3 py-2 rounded-xl transition-colors shadow-sm"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-          Excluir Operação
-        </button>
+        )
       )}
     </div>
   );

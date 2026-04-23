@@ -8,9 +8,10 @@ import { formatarMoeda } from '@/lib/calculos';
 type Props = {
   tituloId: string;
   valorAtual: number;
+  onSuccess?: () => void;
 };
 
-export default function PagamentoParcialBtn({ tituloId, valorAtual }: Props) {
+export default function PagamentoParcialBtn({ tituloId, valorAtual, onSuccess }: Props) {
   const router = useRouter();
   const [aberto, setAberto] = useState(false);
   const [valorPagamento, setValorPagamento] = useState('');
@@ -34,6 +35,7 @@ export default function PagamentoParcialBtn({ tituloId, valorAtual }: Props) {
       setAberto(false);
       setValorPagamento('');
       router.refresh();
+      onSuccess?.();
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Erro.');
     } finally { setLoading(false); }

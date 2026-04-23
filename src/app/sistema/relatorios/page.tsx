@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { formatarMoeda } from '@/lib/calculos';
 import { BarChart3, FileDown, Filter, RefreshCw, Pencil, Trash2, Loader2, AlertTriangle, CheckCircle2, Scale } from 'lucide-react';
 import Link from 'next/link';
+import ProrrogarBtn from '@/components/sistema/ProrrogarBtn';
+import PagamentoParcialBtn from '@/components/sistema/PagamentoParcialBtn';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -512,33 +514,60 @@ export default function RelatoriosPage() {
                               </button>
                             </div>
                           ) : (
-                            <div className="flex items-center gap-1">
-                              <Link
-                                href={`/sistema/titulos/${t.id}/editar`}
-                                className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                                title="Editar"
-                              >
-                                <Pencil className="w-3.5 h-3.5" />
-                              </Link>
+                            <div className="flex flex-col gap-1">
                               {t.status !== 'LIQUIDADO' && (
-                                <button
-                                  onClick={() => darBaixa(t.id)}
-                                  disabled={baixandoId === t.id}
-                                  className="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors disabled:opacity-50"
-                                  title="Dar baixa (marcar como pago)"
-                                >
-                                  {baixandoId === t.id
-                                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                    : <CheckCircle2 className="w-3.5 h-3.5" />}
-                                </button>
+                                <>
+                                  <ProrrogarBtn
+                                    tituloId={t.id}
+                                    tituloNumero={t.numero}
+                                    tituloTipo={t.tipo}
+                                    valor={Number(t.valor)}
+                                    taxaClienteAtual={Number(t.taxaCliente)}
+                                    taxaFornecedorAtual={Number(t.taxaFornecedor)}
+                                    dataVencimentoAtual={format(new Date(t.dataVencimento), 'dd/MM/yyyy')}
+                                    dataVencimentoISO={format(new Date(t.dataVencimento), 'yyyy-MM-dd')}
+                                    emitenteNome={t.emitenteNome}
+                                    emitenteCpfCnpj={t.emitenteCpfCnpj}
+                                    sacadoNome={t.sacadoNome}
+                                    sacadoCpfCnpj={t.sacadoCpfCnpj}
+                                    clienteNome={t.cliente?.nome}
+                                    onSuccess={carregar}
+                                  />
+                                  <PagamentoParcialBtn
+                                    tituloId={t.id}
+                                    valorAtual={Number(t.valor)}
+                                    onSuccess={carregar}
+                                  />
+                                </>
                               )}
-                              <button
-                                onClick={() => setConfirmDelId(t.id)}
-                                className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                                title="Excluir"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              <div className="flex items-center gap-1">
+                                <Link
+                                  href={`/sistema/titulos/${t.id}/editar`}
+                                  className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                                  title="Editar"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </Link>
+                                {t.status !== 'LIQUIDADO' && (
+                                  <button
+                                    onClick={() => darBaixa(t.id)}
+                                    disabled={baixandoId === t.id}
+                                    className="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors disabled:opacity-50"
+                                    title="Dar baixa (marcar como pago)"
+                                  >
+                                    {baixandoId === t.id
+                                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                      : <CheckCircle2 className="w-3.5 h-3.5" />}
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => setConfirmDelId(t.id)}
+                                  className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                  title="Excluir"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </div>
                           )}
                         </td>

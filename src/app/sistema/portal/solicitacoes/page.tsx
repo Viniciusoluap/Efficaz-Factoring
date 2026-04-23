@@ -176,7 +176,7 @@ export default function PortalSolicitacoesPage() {
           <div>
             <label className={labelCls}>Fotos / Documentos</label>
             <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700 mb-3 leading-relaxed">
-              <strong>Dica:</strong> Escaneie seus títulos ou tire fotos e adicione aqui. Você pode adicionar várias fotos. Formatos aceitos: JPG, PNG, PDF.
+              <strong>Dica:</strong> Escaneie seus títulos ou tire fotos e adicione aqui. Você pode adicionar várias fotos. Formatos aceitos: JPG, PNG, HEIC, PDF.
             </div>
 
             {/* Thumbnails dos arquivos selecionados */}
@@ -228,9 +228,8 @@ export default function PortalSolicitacoesPage() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*,application/pdf"
+              accept="image/*,.heic,.heif,application/pdf"
               multiple
-              capture="environment"
               className="hidden"
               onChange={handleFileSelect}
             />

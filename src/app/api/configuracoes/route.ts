@@ -42,17 +42,16 @@ export async function PUT(req: NextRequest) {
     const endVal = endereco || null;
 
     // Raw SQL: bypasses Prisma client schema compatibility issues entirely.
-    // Uses only columns guaranteed to exist in every DB version.
+    // atualizadoEm omitted — column may not exist in all DB versions.
     await prisma.$executeRaw`
-      INSERT INTO configuracoes (id, "taxaMinimaFiscal", "aliquotaImposto", "nomeEmpresa", "cnpj", "emailSistema", "atualizadoEm")
-      VALUES ('default', ${tMF}, ${tAI}, ${nome}, ${cnpjVal}, ${emailVal}, NOW())
+      INSERT INTO configuracoes (id, "taxaMinimaFiscal", "aliquotaImposto", "nomeEmpresa", "cnpj", "emailSistema")
+      VALUES ('default', ${tMF}, ${tAI}, ${nome}, ${cnpjVal}, ${emailVal})
       ON CONFLICT (id) DO UPDATE SET
         "taxaMinimaFiscal" = ${tMF},
         "aliquotaImposto" = ${tAI},
         "nomeEmpresa" = ${nome},
         "cnpj" = ${cnpjVal},
-        "emailSistema" = ${emailVal},
-        "atualizadoEm" = NOW()
+        "emailSistema" = ${emailVal}
     `;
 
     // Try to update columns added in later migrations (silently skip if absent).
