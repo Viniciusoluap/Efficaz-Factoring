@@ -100,13 +100,17 @@ export default function NovoTituloPage() {
               <OcrCheque
                 onExtrair={(dados) => {
                   if (dados.numero) set('numero', dados.numero);
-                  if (dados.valor) set('valor', dados.valor.replace(',', '.'));
+                  if (dados.valor) set('valor', dados.valor);
                   if (dados.data) {
                     const partes = dados.data.split('/');
                     if (partes.length === 3) {
                       set('dataVencimento', `${partes[2]}-${partes[1].padStart(2,'0')}-${partes[0].padStart(2,'0')}`);
                     }
                   }
+                  if (dados.emitenteCpfCnpj) set('emitenteCpfCnpj', dados.emitenteCpfCnpj);
+                  if (dados.emitenteNome) set('emitenteNome', dados.emitenteNome);
+                  if (dados.emitenteCpfCnpj) set('sacadoCpfCnpj', dados.emitenteCpfCnpj);
+                  if (dados.emitenteNome) set('sacadoNome', dados.emitenteNome);
                 }}
               />
             </div>

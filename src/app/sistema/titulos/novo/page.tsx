@@ -377,11 +377,15 @@ export default function NovoTituloPage() {
                     {t.tipo === 'CHEQUE' && (
                       <OcrCheque onExtrair={(dados) => {
                         if (dados.numero) setTitulo(t.id, 'numero', dados.numero);
-                        if (dados.valor) setTitulo(t.id, 'valor', dados.valor.replace(',', '.'));
+                        if (dados.valor) setTitulo(t.id, 'valor', dados.valor);
                         if (dados.data) {
                           const p = dados.data.split('/');
                           if (p.length === 3) setTitulo(t.id, 'dataVencimento', `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`);
                         }
+                        if (dados.emitenteCpfCnpj) setTitulo(t.id, 'emitenteCpfCnpj', dados.emitenteCpfCnpj);
+                        if (dados.emitenteNome) setTitulo(t.id, 'emitenteNome', dados.emitenteNome);
+                        if (dados.emitenteCpfCnpj) setTitulo(t.id, 'sacadoCpfCnpj', dados.emitenteCpfCnpj);
+                        if (dados.emitenteNome) setTitulo(t.id, 'sacadoNome', dados.emitenteNome);
                       }} />
                     )}
 
