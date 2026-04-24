@@ -23,6 +23,7 @@ export default function ConfiguracoesPage() {
   const [form, setForm] = useState(defaultForm);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'ok' | 'erro'>('idle');
+  const [erroMsg, setErroMsg] = useState('');
 
   useEffect(() => {
     fetch('/api/configuracoes').then(r => r.json()).then(d => {
@@ -57,15 +58,24 @@ export default function ConfiguracoesPage() {
   ].reduce((a, b) => a + b, 0);
 
   const salvar = async (e: React.FormEvent) => {
-    e.preventDefault(); setLoading(true); setStatus('idle');
+    e.preventDefault(); setLoading(true); setStatus('idle'); setErroMsg('');
     try {
       const res = await fetch('/api/configuracoes', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, aliquotaImposto: String(totalImpostos.toFixed(2)) }),
       });
-      setStatus(res.ok ? 'ok' : 'erro');
-    } catch { setStatus('erro'); }
+      if (res.ok) {
+        setStatus('ok');
+      } else {
+        const body = await res.json().catch(() => ({}));
+        setErroMsg(`Erro ${res.status}: ${body?.error ?? 'desconhecido'}`);
+        setStatus('erro');
+      }
+    } catch (err) {
+      setErroMsg(err instanceof Error ? err.message : 'Erro de rede');
+      setStatus('erro');
+    }
     finally { setLoading(false); }
   };
 
@@ -156,7 +166,7 @@ export default function ConfiguracoesPage() {
         )}
         {status === 'erro' && (
           <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-600 text-sm">
-            <AlertCircle className="w-4 h-4" /> Erro ao salvar. Tente novamente.
+            <AlertCircle className="w-4 h-4" /> {erroMsg || 'Erro ao salvar. Tente novamente.'}
           </div>
         )}
 
