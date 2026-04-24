@@ -10,6 +10,8 @@ type DadosExtraidos = {
   banco?: string;
   agencia?: string;
   conta?: string;
+  emitenteCpfCnpj?: string;
+  emitenteNome?: string;
   raw?: string;
 };
 
@@ -65,30 +67,64 @@ export default function OcrCheque({
     }
   };
 
-  /**
-   * Tenta extrair dados estruturados do texto bruto do cheque.
-   * Padrões comuns em cheques brasileiros.
-   */
   const extrairDadosCheque = (texto: string): DadosExtraidos => {
-    // Número do cheque (6 dígitos)
-    const numeroMatch = texto.match(/\b(\d{6})\b/);
-    // Valor monetário
-    const valorMatch = texto.match(/R\$[\s]*([0-9.,]+)/i) ??
-      texto.match(/\b(\d{1,3}(?:\.\d{3})*(?:,\d{2}))\b/);
-    // Data DD/MM/AAAA ou variações
-    const dataMatch = texto.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
-    // CMC7 / código de barras banco
-    const bancoMatch = texto.match(/Banco\s+(\w+)/i) ??
-      texto.match(/B\.?\s*(\d{3})/i);
+    const linhas = texto.split('\n').map(l => l.trim()).filter(Boolean);
+
+    // Número do cheque: 6 dígitos isolados (evita pegar CNPJ/CPF)
+    const numeroMatch = texto.match(/(?:^|[\s\n])(\d{6})(?:[\s\n]|$)/m)
+      ?? texto.match(/\bCheque\s*[Nn][oº°]?\s*(\d{6})/i)
+      ?? texto.match(/\b(\d{6})\b/);
+
+    // Valor: prioriza padrão com asterisco (ex: * 5.000,00 ou *5000,00)
+    const valorMatch =
+      texto.match(/\*+\s*([0-9]{1,3}(?:[.,]\d{3})*(?:[.,]\d{2}))/)?.[1] ??
+      texto.match(/R\$\s*([0-9]{1,3}(?:[.,]\d{3})*(?:[.,]\d{2}))/i)?.[1] ??
+      texto.match(/\b([0-9]{1,3}(?:\.\d{3})+,\d{2})\b/)?.[1] ??
+      texto.match(/\b([0-9]+,\d{2})\b/)?.[1];
+
+    // Normaliza valor: troca ponto de milhar, mantém vírgula decimal
+    const valorNorm = valorMatch
+      ? valorMatch.replace(/\./g, '').replace(',', '.').trim()
+      : undefined;
+
+    // Data: DD/MM/AAAA ou DD/MM/AA — qualquer separador
+    const dataMatch = texto.match(/(\d{1,2})[\/\-\s](\d{1,2})[\/\-\s](\d{2,4})/);
+    const dataFmt = dataMatch
+      ? `${dataMatch[1].padStart(2, '0')}/${dataMatch[2].padStart(2, '0')}/${dataMatch[3].length === 2 ? '20' + dataMatch[3] : dataMatch[3]}`
+      : undefined;
+
+    // CNPJ: 00.000.000/0001-00
+    const cnpjMatch = texto.match(/\d{2}[\.\s]?\d{3}[\.\s]?\d{3}[\/\s]?\d{4}[-\s]?\d{2}/);
+    // CPF: 000.000.000-00
+    const cpfMatch = texto.match(/\d{3}[\.\s]?\d{3}[\.\s]?\d{3}[-\s]?\d{2}/);
+    const docMatch = cnpjMatch?.[0]?.replace(/\s/g, '') ?? cpfMatch?.[0]?.replace(/\s/g, '');
+
+    // Nome do emitente: linha que contém LTDA, EIRELI, ME, S/A, S.A ou está acima do CNPJ
+    let nomeEmitente: string | undefined;
+    const regexEmpresa = /\b(LTDA|EIRELI|S\.?A\.?|ME|EPP|MICROEMPRESA|CIA|COMERCIO|CONSTRU|SERVI)\b/i;
+    for (const linha of linhas) {
+      if (regexEmpresa.test(linha) && linha.length > 5) {
+        nomeEmitente = linha.replace(/[^A-Za-zÀ-ÿ0-9\s\.\/\-]/g, '').trim();
+        break;
+      }
+    }
+    // Fallback: linha imediatamente antes do CNPJ encontrado
+    if (!nomeEmitente && cnpjMatch) {
+      const idxLinha = linhas.findIndex(l => l.includes(cnpjMatch[0].slice(0, 8)));
+      if (idxLinha > 0) nomeEmitente = linhas[idxLinha - 1];
+    }
+
+    // Banco: nome após "Banco" ou na linha do logo
+    const bancoMatch = texto.match(/\b(Santander|Bradesco|Ita[uú]|Caixa|BB|Brasil|Sicredi|Sicoob|BRB|Nubank|Inter|C6)\b/i);
 
     return {
       numero: numeroMatch?.[1],
-      valor: valorMatch?.[1]?.replace(/[^\d,]/g, ''),
-      data: dataMatch
-        ? `${dataMatch[1].padStart(2, '0')}/${dataMatch[2].padStart(2, '0')}/${dataMatch[3].length === 2 ? '20' + dataMatch[3] : dataMatch[3]}`
-        : undefined,
+      valor: valorNorm,
+      data: dataFmt,
       banco: bancoMatch?.[1],
-      raw: texto.slice(0, 300),
+      emitenteCpfCnpj: docMatch,
+      emitenteNome: nomeEmitente,
+      raw: texto.slice(0, 500),
     };
   };
 
@@ -188,11 +224,13 @@ export default function OcrCheque({
               <div className="grid grid-cols-2 gap-2 text-xs">
                 {[
                   { label: 'Número', value: resultado.numero },
-                  { label: 'Valor', value: resultado.valor ? `R$ ${resultado.valor}` : undefined },
-                  { label: 'Data', value: resultado.data },
+                  { label: 'Valor', value: resultado.valor ? `R$ ${Number(resultado.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : undefined },
+                  { label: 'Vencimento', value: resultado.data },
                   { label: 'Banco', value: resultado.banco },
+                  { label: 'CPF/CNPJ', value: resultado.emitenteCpfCnpj },
+                  { label: 'Emitente', value: resultado.emitenteNome },
                 ].map(({ label, value }) => value ? (
-                  <div key={label} className="bg-gray-50 rounded-lg px-2.5 py-1.5">
+                  <div key={label} className={`bg-gray-50 rounded-lg px-2.5 py-1.5 ${label === 'CPF/CNPJ' || label === 'Emitente' ? 'col-span-2' : ''}`}>
                     <span className="text-gray-500">{label}: </span>
                     <span className="font-semibold text-gray-800">{value}</span>
                   </div>
