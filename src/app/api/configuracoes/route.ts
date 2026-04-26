@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
 import { prisma } from '@/lib/prisma';
 
 export const runtime = 'nodejs';
@@ -14,9 +13,6 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
-  const token = await getToken({ req });
-  if (!token) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
-
   try {
     const body = await req.json();
     const {
