@@ -2,11 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 
 export const runtime = 'nodejs';
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+export const maxDuration = 60; // Vercel: aumenta timeout de 10s para 60s
 
 export async function POST(req: NextRequest) {
   try {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: 'ANTHROPIC_API_KEY não configurada no Vercel.' }, { status: 500 });
+    }
+
     const body = await req.json();
     const { imageBase64, mediaType = 'image/jpeg' } = body;
 
@@ -14,9 +18,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Imagem não fornecida.' }, { status: 400 });
     }
 
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return NextResponse.json({ error: 'ANTHROPIC_API_KEY não configurada.' }, { status: 500 });
-    }
+    const client = new Anthropic({ apiKey });
 
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
