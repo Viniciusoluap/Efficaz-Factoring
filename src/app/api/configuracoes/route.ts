@@ -37,34 +37,34 @@ export async function POST(req: NextRequest) {
     const telVal = telefone || null;
     const endVal = endereco || null;
 
-    // Raw SQL: bypasses Prisma client schema compatibility issues entirely.
-    // atualizadoEm omitted — column may not exist in all DB versions.
+    // Raw SQL: inclui atualizadoEm (NOT NULL @updatedAt sem default no PostgreSQL)
     await prisma.$executeRaw`
-      INSERT INTO configuracoes (id, "taxaMinimaFiscal", "aliquotaImposto", "nomeEmpresa", "cnpj", "emailSistema")
-      VALUES ('default', ${tMF}, ${tAI}, ${nome}, ${cnpjVal}, ${emailVal})
+      INSERT INTO configuracoes (
+        id, "taxaMinimaFiscal", "aliquotaImposto", "nomeEmpresa", "cnpj", "emailSistema",
+        "telefone", "endereco", "aliquotaPIS", "aliquotaCOFINS", "aliquotaIRPJ",
+        "aliquotaCSLL", "aliquotaISS", "aliquotaIOF", "atualizadoEm"
+      )
+      VALUES (
+        'default', ${tMF}, ${tAI}, ${nome}, ${cnpjVal}, ${emailVal},
+        ${telVal}, ${endVal}, ${tPIS}, ${tCOFINS}, ${tIRPJ},
+        ${tCSLL}, ${tISS}, ${tIOF}, NOW()
+      )
       ON CONFLICT (id) DO UPDATE SET
         "taxaMinimaFiscal" = ${tMF},
         "aliquotaImposto" = ${tAI},
         "nomeEmpresa" = ${nome},
         "cnpj" = ${cnpjVal},
-        "emailSistema" = ${emailVal}
+        "emailSistema" = ${emailVal},
+        "telefone" = ${telVal},
+        "endereco" = ${endVal},
+        "aliquotaPIS" = ${tPIS},
+        "aliquotaCOFINS" = ${tCOFINS},
+        "aliquotaIRPJ" = ${tIRPJ},
+        "aliquotaCSLL" = ${tCSLL},
+        "aliquotaISS" = ${tISS},
+        "aliquotaIOF" = ${tIOF},
+        "atualizadoEm" = NOW()
     `;
-
-    // Try to update columns added in later migrations (silently skip if absent).
-    try {
-      await prisma.$executeRaw`
-        UPDATE configuracoes SET
-          "telefone" = ${telVal},
-          "endereco" = ${endVal},
-          "aliquotaPIS" = ${tPIS},
-          "aliquotaCOFINS" = ${tCOFINS},
-          "aliquotaIRPJ" = ${tIRPJ},
-          "aliquotaCSLL" = ${tCSLL},
-          "aliquotaISS" = ${tISS},
-          "aliquotaIOF" = ${tIOF}
-        WHERE id = 'default'
-      `;
-    } catch { /* columns not yet migrated in this environment */ }
 
     let saved = null;
     try {
