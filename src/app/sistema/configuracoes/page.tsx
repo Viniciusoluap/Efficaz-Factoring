@@ -61,7 +61,7 @@ export default function ConfiguracoesPage() {
     e.preventDefault(); setLoading(true); setStatus('idle'); setErroMsg('');
     try {
       const res = await fetch('/api/configuracoes', {
-        method: 'PUT',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, aliquotaImposto: String(totalImpostos.toFixed(2)) }),
       });
