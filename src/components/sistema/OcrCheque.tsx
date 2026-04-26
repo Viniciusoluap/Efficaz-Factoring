@@ -25,17 +25,36 @@ export default function OcrCheque({
   const [erro, setErro] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const comprimirImagem = (dataUrl: string): Promise<{ base64: string; mime: string }> =>
+    new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 1200;
+        let { width, height } = img;
+        if (width > MAX || height > MAX) {
+          if (width > height) { height = Math.round((height * MAX) / width); width = MAX; }
+          else { width = Math.round((width * MAX) / height); height = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
+        const compressed = canvas.toDataURL('image/jpeg', 0.85);
+        const [, base64] = compressed.split(',');
+        resolve({ base64, mime: 'image/jpeg' });
+      };
+      img.src = dataUrl;
+    });
+
   const handleArquivo = (file: File) => {
     if (!file.type.startsWith('image/')) {
       setErro('Selecione uma imagem (JPG, PNG, WEBP).');
       return;
     }
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const dataUrl = e.target?.result as string;
       setImagem(dataUrl);
-      const [header, base64] = dataUrl.split(',');
-      const mime = header.match(/data:([^;]+)/)?.[1] ?? 'image/jpeg';
+      const { base64, mime } = await comprimirImagem(dataUrl);
       setImagemBase64(base64);
       setMediaType(mime);
     };

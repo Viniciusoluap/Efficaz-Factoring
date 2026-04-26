@@ -58,8 +58,9 @@ export async function POST(req: NextRequest) {
 
     const dados = JSON.parse(jsonMatch[0]);
     return NextResponse.json(dados);
-  } catch (err) {
+  } catch (err: any) {
     console.error('[OCR cheque]', err);
-    return NextResponse.json({ error: 'Erro ao processar imagem.' }, { status: 500 });
+    const msg = err?.message ?? err?.error?.message ?? 'Erro ao processar imagem.';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
