@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   keywords:
     'factoring, antecipação de recebíveis, capital de giro, compra de duplicatas, crédito empresarial, Efficaz Factoring',
   authors: [{ name: 'Efficaz Factoring' }],
+  icons: { icon: '/icon.svg', shortcut: '/icon.svg', apple: '/icon.svg' },
   openGraph: {
     title: 'Efficaz Factoring | Antecipação de Recebíveis',
     description:

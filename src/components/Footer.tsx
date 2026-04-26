@@ -1,6 +1,7 @@
 'use client';
 
-import { TrendingUp, Instagram, Linkedin, Facebook, ArrowUp } from 'lucide-react';
+import { Instagram, Linkedin, Facebook, ArrowUp } from 'lucide-react';
+import LogoEfficaz from '@/components/LogoEfficaz';
 
 const links = {
   company: [
@@ -48,9 +49,7 @@ export default function Footer() {
           {/* Brand */}
           <div className="lg:col-span-1">
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-accent-500 to-accent-600 rounded-lg flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-white" />
-              </div>
+              <LogoEfficaz size={40} />
               <div>
                 <span className="text-xl font-bold">Efficaz</span>
                 <span className="text-xl font-light text-accent-400"> Factoring</span>

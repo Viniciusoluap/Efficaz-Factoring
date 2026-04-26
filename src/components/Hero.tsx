@@ -115,7 +115,7 @@ export default function Hero() {
                   {[
                     { label: 'Clientes atendidos', value: '+2.500', color: 'text-accent-400' },
                     { label: 'Volume antecipado', value: 'R$ 500M+', color: 'text-green-400' },
-                    { label: 'Anos de experiência', value: '15+', color: 'text-blue-300' },
+                    { label: 'Anos de experiência', value: '+25', color: 'text-blue-300' },
                     { label: 'Taxa de aprovação', value: '94%', color: 'text-purple-300' },
                   ].map((stat) => (
                     <div
