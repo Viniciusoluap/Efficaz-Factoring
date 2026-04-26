@@ -12,6 +12,7 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.91.1",
     "@hookform/resolvers": "^3.9.0",
     "@prisma/client": "^5.16.1",
     "@vercel/blob": "^2.3.3",
