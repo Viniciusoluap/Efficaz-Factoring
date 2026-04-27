@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
-import { formatarMoeda } from '@/lib/calculos';
-import { format } from 'date-fns';
+import { formatarMoeda, calcularDataD2 } from '@/lib/calculos';
+import { format, differenceInDays } from 'date-fns';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Layers } from 'lucide-react';
@@ -21,15 +21,33 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
 
   if (!operacao) notFound();
 
+  let opConfig: any = null;
+  try {
+    const cfgRows = await prisma.$queryRaw<any[]>`SELECT * FROM configuracoes WHERE id = 'default'`;
+    opConfig = cfgRows[0] ?? null;
+  } catch {}
+  const opTaxaMin = Number(opConfig?.taxaMinimaFiscal ?? 0.5);
+  const opAliquota = Number(opConfig?.aliquotaImposto ?? 38.63);
+
   const totais = operacao.titulos.reduce(
-    (acc, t) => ({
-      valor: acc.valor + Number(t.valor),
-      encargo: acc.encargo + Number(t.encargo),
-      liquidoCliente: acc.liquidoCliente + Number(t.valorLiquidoCliente),
-      spreadBruto: acc.spreadBruto + Number(t.spreadBruto),
-      spreadLiquido: acc.spreadLiquido + Number(t.spreadLiquido ?? 0),
-      imposto: acc.imposto + Number(t.impostoProvisao ?? 0),
-    }),
+    (acc, t) => {
+      let impostoT = 0;
+      try {
+        const d2 = calcularDataD2(new Date(t.dataVencimento));
+        const prazo = differenceInDays(d2, new Date(t.dataEmissao));
+        const baseEsp = Math.max(0, ((Number(t.valor) * (opTaxaMin / 100)) / 30) * prazo);
+        const impostoCalc = baseEsp * opAliquota / 100;
+        impostoT = Math.min(impostoCalc, Math.max(0, Number(t.spreadBruto)));
+      } catch {}
+      return {
+        valor: acc.valor + Number(t.valor),
+        encargo: acc.encargo + Number(t.encargo),
+        liquidoCliente: acc.liquidoCliente + Number(t.valorLiquidoCliente),
+        spreadBruto: acc.spreadBruto + Number(t.spreadBruto),
+        spreadLiquido: acc.spreadLiquido + Number(t.spreadBruto) - impostoT,
+        imposto: acc.imposto + impostoT,
+      };
+    },
     { valor: 0, encargo: 0, liquidoCliente: 0, spreadBruto: 0, spreadLiquido: 0, imposto: 0 }
   );
 

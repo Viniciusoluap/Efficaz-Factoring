@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { formatarMoeda, calcularDataD2 } from '@/lib/calculos';
-import { BarChart3, FileDown, Filter, RefreshCw, Pencil, Trash2, Loader2, AlertTriangle, CheckCircle2, Scale } from 'lucide-react';
+import { BarChart3, FileDown, Filter, RefreshCw, Pencil, Trash2, Loader2, AlertTriangle, CheckCircle2, Scale, DollarSign } from 'lucide-react';
 import Link from 'next/link';
 import ProrrogarBtn from '@/components/sistema/ProrrogarBtn';
 import PagamentoParcialBtn from '@/components/sistema/PagamentoParcialBtn';
@@ -37,6 +37,14 @@ function calcBaseEspelhoTitulo(t: any, taxaMinima: number): number {
 function calcBaseEspelhoTotal(titulos: any[], taxaMinima: number): number {
   return titulos.reduce((sum, t) => sum + calcBaseEspelhoTitulo(t, taxaMinima), 0);
 }
+function valorFontClass(value: string): string {
+  const len = value.replace(/\s/g, '').length;
+  if (len <= 4)  return 'text-2xl';
+  if (len <= 7)  return 'text-xl';
+  if (len <= 10) return 'text-lg';
+  if (len <= 13) return 'text-base';
+  return 'text-sm';
+}
 
 export default function RelatoriosPage() {
   const [mes, setMes] = useState<number | ''>(hoje.getMonth() + 1);
@@ -51,6 +59,7 @@ export default function RelatoriosPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [baixandoId, setBaixandoId] = useState<string | null>(null);
   const [espelho, setEspelho] = useState(false);
+  const [gerandoFat, setGerandoFat] = useState(false);
   const taxaMinima = Number(dados?.config?.taxaMinimaFiscal ?? 0.5);
 
   const carregar = useCallback(() => {
@@ -253,6 +262,112 @@ export default function RelatoriosPage() {
     }
   };
 
+  const gerarFaturamentoPDF = async () => {
+    if (!dados) return;
+    setGerandoFat(true);
+    try {
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+      const periodoLabelLocal = mes && ano
+        ? `${MESES[mes - 1]} de ${ano}`
+        : ano ? `Ano ${ano}` : mes ? `${MESES[mes - 1]} (todos os anos)` : 'Todo o período';
+      const clienteNome = dados.clientes.find(c => c.id === clienteId)?.nome ?? 'Todos';
+      const fornecedorNome = dados.fornecedores.find(f => f.id === fornecedorId)?.nome ?? 'Todos';
+
+      const rate = Number(dados.config?.aliquotaImposto ?? 38.63) / 100;
+      const taxaMin = taxaMinima;
+      const tp = dados.totaisPeriodo;
+      const spreadBrutoTotal = Number(tp._sum?.spreadBruto ?? 0);
+      const baseEspelhoTotal = calcBaseEspelhoTotal(dados.titulos, taxaMin);
+      const impostoTotal = baseEspelhoTotal * rate;
+      const lucroLiquidoTotal = spreadBrutoTotal - impostoTotal;
+
+      doc.setFillColor(15, 118, 110);
+      doc.rect(0, 0, 210, 30, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('EFFICAZ FACTORING', 14, 13);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Relatório de Faturamento Real — ${periodoLabelLocal}`, 14, 22);
+      doc.text(`Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}`, 140, 22);
+
+      doc.setTextColor(80, 80, 80);
+      doc.setFontSize(9);
+      doc.text(`Cliente: ${clienteNome}   |   Fornecedor: ${fornecedorNome}`, 14, 37);
+
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(30, 30, 30);
+      doc.text(`Resumo — ${periodoLabelLocal} (Faturamento Real)`, 14, 46);
+
+      autoTable(doc, {
+        startY: 50,
+        head: [['Indicador', 'Valor']],
+        body: [
+          ['Títulos no período', String(tp._count?.id ?? 0)],
+          ['Volume Total', formatarMoeda(Number(tp._sum?.valor ?? 0))],
+          ['Encargos Totais', formatarMoeda(Number(tp._sum?.encargo ?? 0))],
+          ['Spread Bruto (Faturamento Normal)', formatarMoeda(spreadBrutoTotal)],
+          [`Base Espelho Fiscal (${taxaMin}% a.m.)`, formatarMoeda(baseEspelhoTotal)],
+          [`Imposto Espelho (${(rate * 100).toFixed(2)}%)`, formatarMoeda(impostoTotal)],
+          ['Lucro Líquido Real', formatarMoeda(lucroLiquidoTotal)],
+        ],
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [15, 118, 110] },
+        alternateRowStyles: { fillColor: [240, 253, 250] },
+        columnStyles: { 1: { halign: 'right' } },
+        margin: { left: 14, right: 14 },
+      });
+
+      if (dados.titulos.length > 0) {
+        const yTitulos = (doc as any).lastAutoTable.finalY + 8;
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(30, 30, 30);
+        doc.text(`Títulos do Período (${dados.titulos.length})`, 14, yTitulos);
+        autoTable(doc, {
+          startY: yTitulos + 4,
+          head: [['Nº', 'Tipo', 'Vencimento', 'Valor', 'Spread Bruto', 'Imposto Esp.', 'Lucro Líq.', 'Status']],
+          body: dados.titulos.map(t => {
+            const baseEsp = calcBaseEspelhoTitulo(t, taxaMin);
+            const imposto = baseEsp * rate;
+            const spreadBruto = Number(t.spreadBruto ?? 0);
+            return [
+              t.numero, t.tipo,
+              format(new Date(t.dataVencimento), 'dd/MM/yyyy'),
+              formatarMoeda(Number(t.valor)),
+              formatarMoeda(spreadBruto),
+              formatarMoeda(imposto),
+              formatarMoeda(spreadBruto - imposto),
+              t.status === 'LIQUIDADO' ? 'Pago' : t.status === 'VENCIDO' ? 'Vencido' : 'Pendente',
+            ];
+          }),
+          styles: { fontSize: 7.5, cellPadding: 2 },
+          headStyles: { fillColor: [15, 118, 110] },
+          alternateRowStyles: { fillColor: [240, 253, 250] },
+          columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' } },
+          margin: { left: 14, right: 14 },
+        });
+      }
+
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text(`Efficaz Factoring — CNPJ 04.578.232/0001-82`, 14, 290);
+        doc.text(`Página ${i} de ${pageCount}`, 190, 290, { align: 'right' });
+      }
+      doc.save(`relatorio-faturamento-real-${ano}-${String(mes).padStart(2, '0')}.pdf`);
+    } finally {
+      setGerandoFat(false);
+    }
+  };
+
   const selCls = 'px-3 py-2 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400';
 
   return (
@@ -341,6 +456,11 @@ export default function RelatoriosPage() {
             <FileDown className="w-4 h-4" />
             {gerando ? 'Gerando PDF...' : espelho ? 'Baixar PDF Espelho' : 'Baixar PDF'}
           </button>
+          <button onClick={gerarFaturamentoPDF} disabled={gerandoFat || loading || !dados}
+            className="flex items-center gap-2 text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 px-4 py-2 rounded-xl transition-colors disabled:opacity-60 shadow-sm">
+            <DollarSign className="w-4 h-4" />
+            {gerandoFat ? 'Gerando...' : 'Faturamento Real'}
+          </button>
         </div>
       </div>
 
@@ -384,9 +504,9 @@ export default function RelatoriosPage() {
                 { label: 'Spread Líquido Total', value: formatarMoeda(spreadLiquido), cor: 'text-green-700' },
               ];
               return cards.map(({ label, value, cor }) => (
-                <div key={label} className={`rounded-2xl p-4 border shadow-sm ${espelho ? 'bg-purple-50 border-purple-100' : 'bg-white border-gray-100'}`}>
-                  <p className={`text-xl font-bold ${cor}`}>{value}</p>
-                  <p className="text-xs text-gray-500 mt-1">{label}</p>
+                <div key={label} className={`rounded-2xl p-4 border shadow-sm overflow-hidden min-w-0 ${espelho ? 'bg-purple-50 border-purple-100' : 'bg-white border-gray-100'}`}>
+                  <p className={`${valorFontClass(value)} font-bold ${cor} leading-tight`}>{value}</p>
+                  <p className="text-xs text-gray-500 mt-1 truncate">{label}</p>
                 </div>
               ));
             })()}

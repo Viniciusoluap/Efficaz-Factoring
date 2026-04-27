@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
-import { formatarMoeda } from '@/lib/calculos';
+import { formatarMoeda, calcularDataD2 } from '@/lib/calculos';
 import { TituloStatus } from '@prisma/client';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth, differenceInDays } from 'date-fns';
 import {
   DollarSign, FileText, AlertTriangle, Clock,
   TrendingUp, Percent, Users, Building2,
@@ -26,7 +26,7 @@ async function getDashboardData() {
 
   const [
     totalTitulos, custodiado, antecipado, vencimentosHoje,
-    vencidos, spreadMes, impostoMes, totalClientes, totalFornecedores,
+    vencidos, spreadMes, titulosMes, totalClientes, totalFornecedores,
     titulosPorStatus, ultimosTitulos,
   ] = await Promise.all([
     prisma.titulo.count(),
@@ -52,9 +52,9 @@ async function getDashboardData() {
       _sum: { spreadBruto: true },
       where: { criadoEm: { gte: inicioMes, lte: fimMes } },
     }),
-    prisma.titulo.aggregate({
-      _sum: { impostoProvisao: true },
+    prisma.titulo.findMany({
       where: { criadoEm: { gte: inicioMes, lte: fimMes } },
+      select: { valor: true, dataEmissao: true, dataVencimento: true, spreadBruto: true },
     }),
     prisma.cliente.count({ where: { ativo: true } }),
     prisma.fornecedor.count({ where: { ativo: true } }),
@@ -69,6 +69,23 @@ async function getDashboardData() {
     }),
   ]);
 
+  let dashConfig: any = null;
+  try {
+    const cfgRows = await prisma.$queryRaw<any[]>`SELECT * FROM configuracoes WHERE id = 'default'`;
+    dashConfig = cfgRows[0] ?? null;
+  } catch {}
+  const dashTaxaMin = Number(dashConfig?.taxaMinimaFiscal ?? 0.5);
+  const dashAliquota = Number(dashConfig?.aliquotaImposto ?? 38.63);
+  const impostoMes = (titulosMes as any[]).reduce((sum, t) => {
+    try {
+      const d2 = calcularDataD2(new Date(t.dataVencimento));
+      const prazo = differenceInDays(d2, new Date(t.dataEmissao));
+      const baseEsp = Math.max(0, ((Number(t.valor) * (dashTaxaMin / 100)) / 30) * prazo);
+      const impostoCalc = baseEsp * dashAliquota / 100;
+      return sum + Math.min(impostoCalc, Math.max(0, Number(t.spreadBruto)));
+    } catch { return sum; }
+  }, 0);
+
   return {
     totalTitulos,
     custodiado: Number(custodiado._sum.valor ?? 0),
@@ -76,7 +93,7 @@ async function getDashboardData() {
     vencimentosHoje,
     vencidos,
     spreadMes: Number(spreadMes._sum.spreadBruto ?? 0),
-    impostoMes: Number(impostoMes._sum.impostoProvisao ?? 0),
+    impostoMes,
     totalClientes,
     totalFornecedores,
     titulosPorStatus,
@@ -124,7 +141,7 @@ export default async function DashboardPage() {
             <div className={`w-10 h-10 ${bg} rounded-xl flex items-center justify-center mb-3`}>
               <Icon className={`w-5 h-5 ${cor}`} />
             </div>
-            <p className={`${valorFontClass(value)} font-bold text-gray-800 truncate`}>{value}</p>
+            <p className={`${valorFontClass(value)} font-bold text-gray-800 leading-tight`}>{value}</p>
             <p className="text-xs font-medium text-gray-500 mt-0.5 truncate">{label}</p>
             <p className="text-xs text-gray-400 mt-1 truncate">{desc}</p>
           </div>

@@ -563,9 +563,9 @@ export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: T
     columnStyles: {
       0: { cellWidth: 16 },
       1: { cellWidth: 18 },
-      2: { cellWidth: 44 },
+      2: { cellWidth: 36 },
       3: { cellWidth: 20 },
-      4: { cellWidth: 8, halign: 'right' },
+      4: { cellWidth: 16, halign: 'right' },
       5: { cellWidth: 24, halign: 'right' },
       6: { cellWidth: 22, halign: 'right' },
       7: { cellWidth: 22, halign: 'right' },
