@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { formatarMoeda } from '@/lib/calculos';
+import { formatarMoeda, calcularDataD2 } from '@/lib/calculos';
 import { BarChart3, FileDown, Filter, RefreshCw, Pencil, Trash2, Loader2, AlertTriangle, CheckCircle2, Scale } from 'lucide-react';
 import Link from 'next/link';
 import ProrrogarBtn from '@/components/sistema/ProrrogarBtn';
 import PagamentoParcialBtn from '@/components/sistema/PagamentoParcialBtn';
-import { format } from 'date-fns';
+import { format, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const MESES = [
@@ -23,9 +23,20 @@ type Dados = {
   titulos: any[];
   clientes: { id: string; nome: string }[];
   fornecedores: { id: string; nome: string }[];
-  config?: { aliquotaImposto: number } | null;
+  config?: { aliquotaImposto: number; taxaMinimaFiscal?: number } | null;
   totalProrrogacoes?: number;
 };
+
+function calcBaseEspelhoTitulo(t: any, taxaMinima: number): number {
+  try {
+    const d2 = calcularDataD2(new Date(t.dataVencimento));
+    const prazo = differenceInDays(d2, new Date(t.dataEmissao));
+    return Math.max(0, ((Number(t.valor) * (taxaMinima / 100)) / 30) * prazo);
+  } catch { return 0; }
+}
+function calcBaseEspelhoTotal(titulos: any[], taxaMinima: number): number {
+  return titulos.reduce((sum, t) => sum + calcBaseEspelhoTitulo(t, taxaMinima), 0);
+}
 
 export default function RelatoriosPage() {
   const [mes, setMes] = useState<number | ''>(hoje.getMonth() + 1);
@@ -40,6 +51,7 @@ export default function RelatoriosPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [baixandoId, setBaixandoId] = useState<string | null>(null);
   const [espelho, setEspelho] = useState(false);
+  const taxaMinima = Number(dados?.config?.taxaMinimaFiscal ?? 0.5);
 
   const carregar = useCallback(() => {
     setLoading(true);
@@ -126,9 +138,10 @@ export default function RelatoriosPage() {
       doc.text(`Resumo — ${periodoLabel}${espelho ? ' (Espelho Fiscal)' : ''}`, 14, 46);
 
       const pdfRate = Number(dados.config?.aliquotaImposto ?? 38.63) / 100;
+      const pdfTaxaMinima = Number(dados.config?.taxaMinimaFiscal ?? 0.5);
       const tp = dados.totaisPeriodo;
       const spreadBrutoPDF = Number(tp._sum?.spreadBruto ?? 0);
-      const baseEspelhoPDF = Number(tp._sum?.baseEspelho ?? 0);
+      const baseEspelhoPDF = espelho ? calcBaseEspelhoTotal(dados.titulos, pdfTaxaMinima) : 0;
       const impostoPDF = espelho ? baseEspelhoPDF * pdfRate : spreadBrutoPDF * pdfRate;
       const spreadLiquidoPDF = espelho ? baseEspelhoPDF - impostoPDF : spreadBrutoPDF - impostoPDF;
       const totalProrrgPDF = Number(dados.totalProrrogacoes ?? 0);
@@ -138,7 +151,7 @@ export default function RelatoriosPage() {
         body: espelho ? [
           ['Títulos no período', String(tp._count?.id ?? 0)],
           ['Volume', formatarMoeda(Number(tp._sum?.valor ?? 0))],
-          ['Spread Fiscal (0,5% a.m.)', formatarMoeda(baseEspelhoPDF)],
+          [`Spread Fiscal (${pdfTaxaMinima}% a.m.)`, formatarMoeda(baseEspelhoPDF)],
           [`Imposto (${(pdfRate * 100).toFixed(2)}%)`, formatarMoeda(impostoPDF)],
           ['Spread Líquido Fiscal', formatarMoeda(spreadLiquidoPDF)],
         ] : [
@@ -165,7 +178,7 @@ export default function RelatoriosPage() {
 
       const tg = dados.totaisGeral;
       const spreadBrutoGeralPDF = Number(tg._sum?.spreadBruto ?? 0);
-      const baseEspelhoGeralPDF = Number(tg._sum?.baseEspelho ?? 0);
+      const baseEspelhoGeralPDF = espelho ? calcBaseEspelhoTotal(dados.titulos, pdfTaxaMinima) : 0;
       const impostoGeralPDF = espelho ? baseEspelhoGeralPDF * pdfRate : spreadBrutoGeralPDF * pdfRate;
       const spreadLiquidoGeralPDF = espelho ? baseEspelhoGeralPDF - impostoGeralPDF : spreadBrutoGeralPDF - impostoGeralPDF;
       autoTable(doc, {
@@ -207,8 +220,8 @@ export default function RelatoriosPage() {
             t.tipo,
             format(new Date(t.dataVencimento), 'dd/MM/yyyy'),
             formatarMoeda(Number(t.valor)),
-            espelho ? formatarMoeda(Number(t.baseEspelho ?? 0)) : formatarMoeda(Number(t.encargo)),
-            espelho ? formatarMoeda(Number(t.baseEspelho ?? 0) * (1 - pdfRate)) : formatarMoeda(Number(t.spreadLiquido ?? 0)),
+            espelho ? formatarMoeda(calcBaseEspelhoTitulo(t, pdfTaxaMinima)) : formatarMoeda(Number(t.encargo)),
+            espelho ? formatarMoeda(calcBaseEspelhoTitulo(t, pdfTaxaMinima) * (1 - pdfRate)) : formatarMoeda(Number(t.spreadLiquido ?? 0)),
             t.status === 'LIQUIDADO' ? 'Pago' : t.status === 'VENCIDO' ? 'Vencido' : 'Pendente',
           ]),
           styles: { fontSize: 7.5, cellPadding: 2 },
@@ -342,7 +355,7 @@ export default function RelatoriosPage() {
             <div className="flex items-center gap-3 bg-purple-50 border border-purple-200 rounded-2xl px-5 py-3">
               <Scale className="w-4 h-4 text-purple-600 flex-shrink-0" />
               <p className="text-sm text-purple-800">
-                <strong>Modo Espelho Fiscal ativo</strong> — valores calculados com taxa mínima de 0,5% a.m. (Lucro Presumido). Use estes dados para declaração ao contador.
+                <strong>Modo Espelho Fiscal ativo</strong> — valores calculados com taxa mínima de {taxaMinima.toFixed(1).replace('.', ',')}% a.m. (Lucro Presumido). Use estes dados para declaração ao contador.
               </p>
             </div>
           )}
@@ -353,13 +366,13 @@ export default function RelatoriosPage() {
               const rate = Number(dados.config?.aliquotaImposto ?? 38.63) / 100;
               const tp = dados.totaisPeriodo;
               const spreadBruto = Number(tp._sum?.spreadBruto ?? 0);
-              const baseEsp = Number(tp._sum?.baseEspelho ?? 0);
+              const baseEsp = espelho ? calcBaseEspelhoTotal(dados.titulos, taxaMinima) : 0;
               const imposto = espelho ? baseEsp * rate : spreadBruto * rate;
               const spreadLiquido = espelho ? baseEsp - imposto : spreadBruto - imposto;
               const cards = espelho ? [
                 { label: 'Total de Títulos', value: String(tp._count?.id ?? 0), cor: 'text-gray-800' },
                 { label: 'Volume Total', value: formatarMoeda(Number(tp._sum?.valor ?? 0)), cor: 'text-blue-600' },
-                { label: 'Spread Fiscal (0,5%)', value: formatarMoeda(baseEsp), cor: 'text-purple-600' },
+                { label: `Spread Fiscal (${taxaMinima}%)`, value: formatarMoeda(baseEsp), cor: 'text-purple-600' },
                 { label: 'Imposto', value: formatarMoeda(imposto), cor: 'text-red-600' },
                 { label: 'Spread Líquido Fiscal', value: formatarMoeda(spreadLiquido), cor: 'text-green-700' },
               ] : [
@@ -391,7 +404,7 @@ export default function RelatoriosPage() {
                   const rate = Number(dados.config?.aliquotaImposto ?? 38.63) / 100;
                   const tp = dados.totaisPeriodo;
                   const spreadBruto = Number(tp._sum?.spreadBruto ?? 0);
-                  const baseEspelho = Number(tp._sum?.baseEspelho ?? 0);
+                  const baseEspelho = espelho ? calcBaseEspelhoTotal(dados.titulos, taxaMinima) : 0;
                   const imposto = espelho ? baseEspelho * rate : spreadBruto * rate;
                   const spreadLiquido = espelho ? baseEspelho - imposto : spreadBruto - imposto;
                   const aliqLabel = `(${(rate * 100).toFixed(2)}%)`;
@@ -399,7 +412,7 @@ export default function RelatoriosPage() {
                   return espelho ? [
                     { label: 'Títulos', value: String(tp._count?.id ?? 0) },
                     { label: 'Volume', value: formatarMoeda(Number(tp._sum?.valor ?? 0)) },
-                    { label: 'Spread Fiscal (0,5% a.m.)', value: formatarMoeda(baseEspelho) },
+                    { label: `Spread Fiscal (${taxaMinima}% a.m.)`, value: formatarMoeda(baseEspelho) },
                     { label: `Imposto ${aliqLabel}`, value: formatarMoeda(imposto) },
                     { label: 'Spread Líquido Fiscal', value: formatarMoeda(spreadLiquido) },
                   ] : [
@@ -477,11 +490,11 @@ export default function RelatoriosPage() {
                         <td className="px-3 py-2.5 text-gray-600">{format(new Date(t.dataVencimento), 'dd/MM/yyyy')}</td>
                         <td className="px-3 py-2.5 text-blue-600 font-semibold">{formatarMoeda(Number(t.valor))}</td>
                         <td className={`px-3 py-2.5 ${espelho ? 'text-purple-600' : 'text-amber-600'}`}>
-                          {espelho ? formatarMoeda(Number(t.baseEspelho ?? 0)) : formatarMoeda(Number(t.encargo))}
+                          {espelho ? formatarMoeda(calcBaseEspelhoTitulo(t, taxaMinima)) : formatarMoeda(Number(t.encargo))}
                         </td>
                         <td className="px-3 py-2.5 text-green-600 font-semibold">
                           {espelho
-                            ? formatarMoeda(Number(t.baseEspelho ?? 0) * (1 - Number(dados.config?.aliquotaImposto ?? 38.63) / 100))
+                            ? formatarMoeda(calcBaseEspelhoTitulo(t, taxaMinima) * (1 - Number(dados.config?.aliquotaImposto ?? 38.63) / 100))
                             : formatarMoeda(Number(t.spreadLiquido ?? 0))
                           }
                         </td>
