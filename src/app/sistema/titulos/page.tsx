@@ -21,6 +21,14 @@ function opStatusInfo(status: string): { label: string; cls: string } {
   if (status === 'CANCELADA') return { label: 'Cancelada', cls: 'bg-gray-100 text-gray-500 border-gray-200' };
   return { label: 'Pendente', cls: 'bg-amber-100 text-amber-700 border-amber-200' };
 }
+function valorFontClass(value: string): string {
+  const len = value.replace(/\s/g, '').length;
+  if (len <= 4)  return 'text-2xl';
+  if (len <= 7)  return 'text-xl';
+  if (len <= 10) return 'text-lg';
+  if (len <= 13) return 'text-base';
+  return 'text-sm';
+}
 
 export default async function TitulosPage() {
   const operacoes = await prisma.operacao.findMany({
@@ -76,9 +84,9 @@ export default async function TitulosPage() {
           { label: 'Total de Encargos', value: formatarMoeda(totais.encargo), cor: 'text-amber-600' },
           { label: 'Spread Bruto Total', value: formatarMoeda(totais.spread), cor: 'text-green-600' },
         ].map(({ label, value, cor }) => (
-          <div key={label} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-            <p className="text-xs text-gray-500 mb-1">{label}</p>
-            <p className={`text-xl font-bold ${cor}`}>{value}</p>
+          <div key={label} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm overflow-hidden min-w-0">
+            <p className="text-xs text-gray-500 mb-1 truncate">{label}</p>
+            <p className={`${valorFontClass(value)} font-bold ${cor} leading-tight`}>{value}</p>
           </div>
         ))}
       </div>
