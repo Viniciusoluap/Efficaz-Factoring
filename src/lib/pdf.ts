@@ -562,8 +562,8 @@ export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: T
     alternateRowStyles: { fillColor: [245, 248, 255] },
     columnStyles: {
       0: { cellWidth: 16 },
-      1: { cellWidth: 18 },
-      2: { cellWidth: 36 },
+      1: { cellWidth: 24, overflow: 'ellipsize' },
+      2: { cellWidth: 30 },
       3: { cellWidth: 20 },
       4: { cellWidth: 16, halign: 'right' },
       5: { cellWidth: 24, halign: 'right' },
@@ -848,10 +848,10 @@ export async function gerarContratoFornecedorPDF(
     alternateRowStyles: { fillColor: [245, 248, 255] },
     columnStyles: {
       0: { cellWidth: 14 },
-      1: { cellWidth: 22 },
-      2: { cellWidth: 38 },
+      1: { cellWidth: 22, overflow: 'ellipsize' },
+      2: { cellWidth: 30 },
       3: { cellWidth: 20 },
-      4: { cellWidth: 8, halign: 'right' },
+      4: { cellWidth: 16, halign: 'right' },
       5: { cellWidth: 22, halign: 'right' },
       6: { cellWidth: 25, halign: 'right' },
       7: { cellWidth: 25, halign: 'right' },
@@ -1012,6 +1012,7 @@ function addRodapeDocumento(doc: jsPDF, total: number, empresa = EMPRESA_DEFAULT
 }
 
 function gerarPaginaPromissoria(doc: jsPDF, t: TituloDocumentoItem, clienteNome?: string, clienteCpfCnpj?: string) {
+  const EMPRESA = EMPRESA_DEFAULT;
   const L = 15, W = 180;
   let y = 18;
 
@@ -1120,6 +1121,7 @@ function gerarPaginaPromissoria(doc: jsPDF, t: TituloDocumentoItem, clienteNome?
 }
 
 function gerarPaginaBoleto(doc: jsPDF, t: TituloDocumentoItem, clienteNome?: string, clienteCpfCnpj?: string) {
+  const EMPRESA = EMPRESA_DEFAULT;
   const L = 15, W = 180;
   let y = 18;
 
@@ -1210,6 +1212,7 @@ function gerarPaginaBoleto(doc: jsPDF, t: TituloDocumentoItem, clienteNome?: str
 }
 
 function gerarPaginaCheque(doc: jsPDF, t: TituloDocumentoItem) {
+  const EMPRESA = EMPRESA_DEFAULT;
   const L = 15, W = 180;
   let y = 18;
 
