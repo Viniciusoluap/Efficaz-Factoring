@@ -7,6 +7,7 @@ import { ArrowLeft, Layers } from 'lucide-react';
 import OperacaoStatusBtn from '@/components/sistema/OperacaoStatusBtn';
 import OperacaoAcoes from '@/components/sistema/OperacaoAcoes';
 import TitulosSelecionaveis, { TituloTabela } from '@/components/sistema/TitulosSelecionaveis';
+import DocumentosOperacao from '@/components/sistema/DocumentosOperacao';
 
 
 export default async function OperacaoDetalhePage({ params }: { params: { id: string } }) {
@@ -16,8 +17,9 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
       cliente: true,
       fornecedor: true,
       titulos: { orderBy: [{ dataVencimento: 'asc' }, { valor: 'asc' }] },
+      documentos: { orderBy: { criadoEm: 'desc' } },
     },
-  });
+  } as any);
 
   if (!operacao) notFound();
 
@@ -232,6 +234,17 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
         clienteRepresentanteNome={operacao.cliente?.representanteNome ?? undefined}
         clienteRepresentanteCpf={operacao.cliente?.representanteCpf ?? undefined}
         isPaga={isPaga}
+      />
+
+      {/* Documentos Assinados */}
+      <DocumentosOperacao
+        operacaoId={operacao.id}
+        initialDocs={((operacao as any).documentos ?? []).map((d: any) => ({
+          id: d.id,
+          nome: d.nome,
+          url: d.url,
+          criadoEm: d.criadoEm.toISOString(),
+        }))}
       />
 
       {operacao.observacoes && (

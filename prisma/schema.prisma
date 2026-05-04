@@ -178,9 +178,21 @@ model Operacao {
   criadoEm      DateTime    @default(now())
   atualizadoEm  DateTime    @updatedAt
 
-  titulos Titulo[]
+  titulos    Titulo[]
+  documentos DocumentoOperacao[]
 
   @@map("operacoes")
+}
+
+model DocumentoOperacao {
+  id         String   @id @default(cuid())
+  operacaoId String
+  operacao   Operacao @relation(fields: [operacaoId], references: [id], onDelete: Cascade)
+  nome       String
+  url        String
+  criadoEm  DateTime @default(now())
+
+  @@map("documentos_operacao")
 }
 
 model Contrato {
