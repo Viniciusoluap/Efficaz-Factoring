@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
       taxaMinimaFiscal, aliquotaImposto,
       aliquotaPIS, aliquotaCOFINS, aliquotaIRPJ,
       aliquotaCSLL, aliquotaISS, aliquotaIOF,
+      c6BankAccessToken, c6BankPersonId, c6BankWebhookSecret, c6BankSandbox,
     } = body;
 
     const tMF = parseFloat(String(taxaMinimaFiscal).replace(',', '.')) || 0.5;
@@ -36,18 +37,26 @@ export async function POST(req: NextRequest) {
     const emailVal = emailSistema || null;
     const telVal = telefone || null;
     const endVal = endereco || null;
+    const c6Token = c6BankAccessToken || null;
+    const c6PersonId = c6BankPersonId || null;
+    const c6WebhookSecret = c6BankWebhookSecret || null;
+    const c6Sandbox = c6BankSandbox === false ? false : true;
 
     // Raw SQL: inclui atualizadoEm (NOT NULL @updatedAt sem default no PostgreSQL)
     await prisma.$executeRaw`
       INSERT INTO configuracoes (
         id, "taxaMinimaFiscal", "aliquotaImposto", "nomeEmpresa", "cnpj", "emailSistema",
         "telefone", "endereco", "aliquotaPIS", "aliquotaCOFINS", "aliquotaIRPJ",
-        "aliquotaCSLL", "aliquotaISS", "aliquotaIOF", "atualizadoEm"
+        "aliquotaCSLL", "aliquotaISS", "aliquotaIOF",
+        "c6BankAccessToken", "c6BankPersonId", "c6BankWebhookSecret", "c6BankSandbox",
+        "atualizadoEm"
       )
       VALUES (
         'default', ${tMF}, ${tAI}, ${nome}, ${cnpjVal}, ${emailVal},
         ${telVal}, ${endVal}, ${tPIS}, ${tCOFINS}, ${tIRPJ},
-        ${tCSLL}, ${tISS}, ${tIOF}, NOW()
+        ${tCSLL}, ${tISS}, ${tIOF},
+        ${c6Token}, ${c6PersonId}, ${c6WebhookSecret}, ${c6Sandbox},
+        NOW()
       )
       ON CONFLICT (id) DO UPDATE SET
         "taxaMinimaFiscal" = ${tMF},
@@ -63,6 +72,10 @@ export async function POST(req: NextRequest) {
         "aliquotaCSLL" = ${tCSLL},
         "aliquotaISS" = ${tISS},
         "aliquotaIOF" = ${tIOF},
+        "c6BankAccessToken" = ${c6Token},
+        "c6BankPersonId" = ${c6PersonId},
+        "c6BankWebhookSecret" = ${c6WebhookSecret},
+        "c6BankSandbox" = ${c6Sandbox},
         "atualizadoEm" = NOW()
     `;
 

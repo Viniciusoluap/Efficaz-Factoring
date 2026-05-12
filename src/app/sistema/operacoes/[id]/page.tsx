@@ -89,6 +89,8 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
     custoCedente: Number(t.custoCedente),
   }));
 
+  const c6BankConfigurado = Boolean(opConfig?.c6BankAccessToken && opConfig?.c6BankPersonId);
+
   const titulosTabela: TituloTabela[] = operacao.titulos.map(t => ({
     id: t.id,
     numero: t.numero,
@@ -105,6 +107,7 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
     encargo: Number(t.encargo),
     valorLiquidoCliente: Number(t.valorLiquidoCliente),
     spreadBruto: Number(t.spreadBruto),
+    linhaDigitavel: (t as any).linhaDigitavel ?? null,
   }));
 
   const titulosPDF = operacao.titulos.map(t => ({
@@ -234,6 +237,7 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
         clienteRepresentanteNome={operacao.cliente?.representanteNome ?? undefined}
         clienteRepresentanteCpf={operacao.cliente?.representanteCpf ?? undefined}
         isPaga={isPaga}
+        c6BankConfigurado={c6BankConfigurado}
       />
 
       {/* Documentos Assinados */}

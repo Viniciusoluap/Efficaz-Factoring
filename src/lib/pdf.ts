@@ -968,6 +968,7 @@ export type TituloDocumentoItem = {
   valor: number;
   encargo: number;
   valorLiquidoCliente: number;
+  linhaDigitavel?: string | null;
 };
 
 function valorPorExtenso(valor: number): string {
@@ -1203,12 +1204,19 @@ function gerarPaginaBoleto(doc: jsPDF, t: TituloDocumentoItem, clienteNome?: str
   doc.text('Após o vencimento, sujeito a multa de 2% e juros de 1% ao mês.', L, y); y += 4;
   doc.text('Não receber após 30 dias do vencimento.', L, y); y += 10;
 
-  // Área de código de barras (placeholder)
+  // Área de código de barras
   doc.setFillColor(240, 243, 250);
   doc.rect(L, y, W, 18, 'F');
   doc.setDrawColor(200, 210, 230); doc.rect(L, y, W, 18, 'S');
-  doc.setFontSize(7); doc.setTextColor(150, 160, 175); doc.setFont('helvetica', 'normal');
-  doc.text('[ Código de barras — gerado pela instituição bancária ]', 105, y + 10, { align: 'center' });
+  if (t.linhaDigitavel) {
+    doc.setFontSize(8); doc.setTextColor(15, 23, 42); doc.setFont('courier', 'bold');
+    doc.text(t.linhaDigitavel, 105, y + 7, { align: 'center' });
+    doc.setFontSize(6.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 110, 130);
+    doc.text('LINHA DIGITÁVEL', 105, y + 14, { align: 'center' });
+  } else {
+    doc.setFontSize(7); doc.setTextColor(150, 160, 175); doc.setFont('helvetica', 'normal');
+    doc.text('[ Código de barras — gerado pela instituição bancária ]', 105, y + 10, { align: 'center' });
+  }
 }
 
 function gerarPaginaCheque(doc: jsPDF, t: TituloDocumentoItem) {
