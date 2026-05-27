@@ -35,6 +35,7 @@ export type TituloTabela = TituloDocumentoItem & {
   status: string;
   sacadoCpfCnpj: string;
   spreadBruto: number;
+  linhaDigitavel?: string | null;
 };
 
 type Totais = {
@@ -54,9 +55,10 @@ type Props = {
   clienteRepresentanteNome?: string;
   clienteRepresentanteCpf?: string;
   isPaga?: boolean;
+  c6BankConfigurado?: boolean;
 };
 
-export default function TitulosSelecionaveis({ titulos, totais, operacaoId, operacaoNumero, clienteNome, clienteCpfCnpj, clienteRepresentanteNome, clienteRepresentanteCpf, isPaga }: Props) {
+export default function TitulosSelecionaveis({ titulos, totais, operacaoId, operacaoNumero, clienteNome, clienteCpfCnpj, clienteRepresentanteNome, clienteRepresentanteCpf, isPaga, c6BankConfigurado }: Props) {
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [loadingPdf, setLoadingPdf] = useState(false);
   const [loadingEmail, setLoadingEmail] = useState(false);
@@ -101,13 +103,32 @@ export default function TitulosSelecionaveis({ titulos, totais, operacaoId, oper
         valor: t.valor,
         encargo: t.encargo,
         valorLiquidoCliente: t.valorLiquidoCliente,
+        linhaDigitavel: t.linhaDigitavel,
       }));
 
   const handleDownload = async () => {
-    const sel = getTitulosSelecionados();
+    let sel = getTitulosSelecionados();
     if (!sel.length) return;
     setLoadingPdf(true);
     try {
+      if (c6BankConfigurado) {
+        const boletos = sel.filter(t => t.tipo === 'BOLETO');
+        if (boletos.length > 0) {
+          const res = await fetch('/api/boletos/emitir-lote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tituloIds: boletos.map(t => t.id) }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const mapa: Record<string, string> = {};
+            for (const r of (data.titulos ?? [])) mapa[r.id] = r.linhaDigitavel;
+            sel = sel.map(t => t.tipo === 'BOLETO' && mapa[t.id]
+              ? { ...t, linhaDigitavel: mapa[t.id] }
+              : t);
+          }
+        }
+      }
       const doc = await gerarDocumentosTitulosPDF(sel, operacaoNumero, clienteNome, clienteCpfCnpj);
       doc.save(`documentos-op-${operacaoNumero}.pdf`);
     } finally {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Save, Settings, AlertCircle, CheckCircle, Info } from 'lucide-react';
+import { Save, Settings, AlertCircle, CheckCircle, Info, Building2 } from 'lucide-react';
 
 const defaultForm = {
   nomeEmpresa: 'Efficaz Factoring',
@@ -17,12 +17,17 @@ const defaultForm = {
   aliquotaCSLL: '9',
   aliquotaISS: '5',
   aliquotaIOF: '0.38',
+  c6BankAccessToken: '',
+  c6BankPersonId: '',
+  c6BankWebhookSecret: '',
+  c6BankSandbox: 'true',
 };
 
 export default function ConfiguracoesPage() {
   const [form, setForm] = useState(defaultForm);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'ok' | 'erro'>('idle');
+  const [erroMsg, setErroMsg] = useState('');
 
   useEffect(() => {
     fetch('/api/configuracoes').then(r => r.json()).then(d => {
@@ -40,6 +45,10 @@ export default function ConfiguracoesPage() {
         aliquotaCSLL: String(d.aliquotaCSLL ?? 9),
         aliquotaISS: String(d.aliquotaISS ?? 5),
         aliquotaIOF: String(d.aliquotaIOF ?? 0.38),
+        c6BankAccessToken: d.c6BankAccessToken ?? '',
+        c6BankPersonId: d.c6BankPersonId ?? '',
+        c6BankWebhookSecret: d.c6BankWebhookSecret ?? '',
+        c6BankSandbox: d.c6BankSandbox === false ? 'false' : 'true',
       });
     }).catch(() => {});
   }, []);
@@ -57,17 +66,32 @@ export default function ConfiguracoesPage() {
   ].reduce((a, b) => a + b, 0);
 
   const salvar = async (e: React.FormEvent) => {
-    e.preventDefault(); setLoading(true); setStatus('idle');
+    e.preventDefault(); setLoading(true); setStatus('idle'); setErroMsg('');
     try {
       const res = await fetch('/api/configuracoes', {
-        method: 'PUT',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, aliquotaImposto: String(totalImpostos.toFixed(2)) }),
+        body: JSON.stringify({
+          ...form,
+          aliquotaImposto: String(totalImpostos.toFixed(2)),
+          c6BankSandbox: form.c6BankSandbox === 'true',
+        }),
       });
-      setStatus(res.ok ? 'ok' : 'erro');
-    } catch { setStatus('erro'); }
+      if (res.ok) {
+        setStatus('ok');
+      } else {
+        const body = await res.json().catch(() => ({}));
+        setErroMsg(`Erro ${res.status}: ${body?.error ?? 'desconhecido'}`);
+        setStatus('erro');
+      }
+    } catch (err) {
+      setErroMsg(err instanceof Error ? err.message : 'Erro de rede');
+      setStatus('erro');
+    }
     finally { setLoading(false); }
   };
+
+  const c6Ativo = Boolean(form.c6BankAccessToken && form.c6BankPersonId);
 
   return (
     <div className="max-w-2xl space-y-5">
@@ -149,6 +173,78 @@ export default function ConfiguracoesPage() {
           </div>
         </div>
 
+        {/* C6 Bank */}
+        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-gray-700 flex items-center gap-2">
+              <Building2 className="w-4 h-4" /> C6 Bank — Emissão de Boletos
+            </h2>
+            {c6Ativo ? (
+              <span className="text-xs bg-green-50 text-green-700 font-semibold px-3 py-1 rounded-full border border-green-200">
+                Ativo
+              </span>
+            ) : (
+              <span className="text-xs bg-gray-100 text-gray-500 font-semibold px-3 py-1 rounded-full border border-gray-200">
+                Não configurado
+              </span>
+            )}
+          </div>
+
+          <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-xs text-amber-700">
+            Acesse <span className="font-semibold">developers.c6bank.com.br</span> → Cadastro para obter o Access Token e Person ID. Após aprovação, cole as credenciais abaixo.
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Access Token (Bearer)</label>
+              <input
+                type="password"
+                className={inputCls}
+                value={form.c6BankAccessToken}
+                onChange={e => set('c6BankAccessToken', e.target.value)}
+                placeholder="Token fornecido pelo C6 Bank"
+                autoComplete="new-password"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Person ID</label>
+              <input
+                className={inputCls}
+                value={form.c6BankPersonId}
+                onChange={e => set('c6BankPersonId', e.target.value)}
+                placeholder="ID numérico da conta"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Webhook Secret</label>
+              <input
+                type="password"
+                className={inputCls}
+                value={form.c6BankWebhookSecret}
+                onChange={e => set('c6BankWebhookSecret', e.target.value)}
+                placeholder="Para validar notificações de pagamento"
+                autoComplete="new-password"
+              />
+              <p className="text-xs text-gray-400 mt-0.5">URL do webhook: <span className="font-mono">/api/boletos/webhook</span></p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => set('c6BankSandbox', form.c6BankSandbox === 'true' ? 'false' : 'true')}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${form.c6BankSandbox === 'true' ? 'bg-amber-400' : 'bg-blue-600'}`}
+            >
+              <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${form.c6BankSandbox === 'true' ? 'translate-x-1' : 'translate-x-4'}`} />
+            </button>
+            <span className="text-xs text-gray-600 font-medium">
+              {form.c6BankSandbox === 'true'
+                ? 'Sandbox (testes) — boletos não são reais'
+                : 'Produção — boletos oficiais para cobrança'}
+            </span>
+          </div>
+        </div>
+
         {status === 'ok' && (
           <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-green-600 text-sm">
             <CheckCircle className="w-4 h-4" /> Configurações salvas com sucesso!
@@ -156,7 +252,7 @@ export default function ConfiguracoesPage() {
         )}
         {status === 'erro' && (
           <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-600 text-sm">
-            <AlertCircle className="w-4 h-4" /> Erro ao salvar. Tente novamente.
+            <AlertCircle className="w-4 h-4" /> {erroMsg || 'Erro ao salvar. Tente novamente.'}
           </div>
         )}
 

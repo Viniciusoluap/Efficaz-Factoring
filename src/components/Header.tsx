@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Menu, X, TrendingUp } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
+import LogoEfficaz from '@/components/LogoEfficaz';
 
 const navLinks = [
   { label: 'Início', href: '#inicio' },
@@ -51,8 +52,8 @@ export default function Header() {
             }}
             className="flex items-center gap-2 group"
           >
-            <div className="w-10 h-10 bg-gradient-to-br from-accent-500 to-accent-600 rounded-lg flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
-              <TrendingUp className="w-6 h-6 text-white" />
+            <div className="group-hover:scale-105 transition-transform">
+              <LogoEfficaz size={40} />
             </div>
             <div>
               <span

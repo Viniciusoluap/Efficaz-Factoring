@@ -146,6 +146,12 @@ model Titulo {
   impostoProvisao     Decimal?     @db.Decimal(15, 2)
   spreadLiquido       Decimal?     @db.Decimal(15, 2)
   garantiaUrl         String?
+  // Boleto bancário (C6 Bank)
+  boletoId            String?
+  codigoBarra         String?
+  linhaDigitavel      String?
+  boletoUrl           String?
+  boletoEmitidoEm     DateTime?
   clienteId           String?
   cliente             Cliente?     @relation(fields: [clienteId], references: [id])
   fornecedorId        String?
@@ -178,9 +184,21 @@ model Operacao {
   criadoEm      DateTime    @default(now())
   atualizadoEm  DateTime    @updatedAt
 
-  titulos Titulo[]
+  titulos    Titulo[]
+  documentos DocumentoOperacao[]
 
   @@map("operacoes")
+}
+
+model DocumentoOperacao {
+  id         String   @id @default(cuid())
+  operacaoId String
+  operacao   Operacao @relation(fields: [operacaoId], references: [id], onDelete: Cascade)
+  nome       String
+  url        String
+  criadoEm  DateTime @default(now())
+
+  @@map("documentos_operacao")
 }
 
 model Contrato {
@@ -254,8 +272,13 @@ model Configuracao {
   emailSistema     String?
   telefone         String?
   endereco         String?
-  whatsappApiKey   String?
-  atualizadoEm     DateTime @updatedAt
+  whatsappApiKey        String?
+  // C6 Bank — Cobrança de Boleto (BaaS)
+  c6BankAccessToken     String?  // Bearer token fornecido pelo C6 Bank BaaS
+  c6BankPersonId        String?  // person_Id header (ID numérico da conta)
+  c6BankWebhookSecret   String?  // Secret para validar webhooks de pagamento
+  c6BankSandbox         Boolean  @default(true)
+  atualizadoEm          DateTime @updatedAt
 
   @@map("configuracoes")
 }

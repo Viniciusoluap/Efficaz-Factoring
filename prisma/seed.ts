@@ -8,10 +8,10 @@ async function main() {
 
   const senhaHash = await bcrypt.hash('Efficaz2024!', 10);
 
-  // Admin padrão
+  // Admin padrão — sempre garante que a senha e ativo estão corretos
   const admin = await prisma.usuario.upsert({
     where: { email: 'admin@grupoefficaz.com.br' },
-    update: {},
+    update: { senha: senhaHash, ativo: true, perfil: Perfil.ADMIN },
     create: {
       nome: 'Administrador',
       email: 'admin@grupoefficaz.com.br',

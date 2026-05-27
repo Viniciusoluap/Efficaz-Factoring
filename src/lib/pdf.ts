@@ -562,10 +562,10 @@ export async function gerarContratoOperacaoPDF(operacao: OperacaoPDF, titulos: T
     alternateRowStyles: { fillColor: [245, 248, 255] },
     columnStyles: {
       0: { cellWidth: 16 },
-      1: { cellWidth: 18 },
-      2: { cellWidth: 44 },
+      1: { cellWidth: 24, overflow: 'ellipsize' },
+      2: { cellWidth: 30 },
       3: { cellWidth: 20 },
-      4: { cellWidth: 8, halign: 'right' },
+      4: { cellWidth: 16, halign: 'right' },
       5: { cellWidth: 24, halign: 'right' },
       6: { cellWidth: 22, halign: 'right' },
       7: { cellWidth: 22, halign: 'right' },
@@ -848,10 +848,10 @@ export async function gerarContratoFornecedorPDF(
     alternateRowStyles: { fillColor: [245, 248, 255] },
     columnStyles: {
       0: { cellWidth: 14 },
-      1: { cellWidth: 22 },
-      2: { cellWidth: 38 },
+      1: { cellWidth: 22, overflow: 'ellipsize' },
+      2: { cellWidth: 30 },
       3: { cellWidth: 20 },
-      4: { cellWidth: 8, halign: 'right' },
+      4: { cellWidth: 16, halign: 'right' },
       5: { cellWidth: 22, halign: 'right' },
       6: { cellWidth: 25, halign: 'right' },
       7: { cellWidth: 25, halign: 'right' },
@@ -968,6 +968,7 @@ export type TituloDocumentoItem = {
   valor: number;
   encargo: number;
   valorLiquidoCliente: number;
+  linhaDigitavel?: string | null;
 };
 
 function valorPorExtenso(valor: number): string {
@@ -1012,6 +1013,7 @@ function addRodapeDocumento(doc: jsPDF, total: number, empresa = EMPRESA_DEFAULT
 }
 
 function gerarPaginaPromissoria(doc: jsPDF, t: TituloDocumentoItem, clienteNome?: string, clienteCpfCnpj?: string) {
+  const EMPRESA = EMPRESA_DEFAULT;
   const L = 15, W = 180;
   let y = 18;
 
@@ -1120,6 +1122,7 @@ function gerarPaginaPromissoria(doc: jsPDF, t: TituloDocumentoItem, clienteNome?
 }
 
 function gerarPaginaBoleto(doc: jsPDF, t: TituloDocumentoItem, clienteNome?: string, clienteCpfCnpj?: string) {
+  const EMPRESA = EMPRESA_DEFAULT;
   const L = 15, W = 180;
   let y = 18;
 
@@ -1201,15 +1204,23 @@ function gerarPaginaBoleto(doc: jsPDF, t: TituloDocumentoItem, clienteNome?: str
   doc.text('Após o vencimento, sujeito a multa de 2% e juros de 1% ao mês.', L, y); y += 4;
   doc.text('Não receber após 30 dias do vencimento.', L, y); y += 10;
 
-  // Área de código de barras (placeholder)
+  // Área de código de barras
   doc.setFillColor(240, 243, 250);
   doc.rect(L, y, W, 18, 'F');
   doc.setDrawColor(200, 210, 230); doc.rect(L, y, W, 18, 'S');
-  doc.setFontSize(7); doc.setTextColor(150, 160, 175); doc.setFont('helvetica', 'normal');
-  doc.text('[ Código de barras — gerado pela instituição bancária ]', 105, y + 10, { align: 'center' });
+  if (t.linhaDigitavel) {
+    doc.setFontSize(8); doc.setTextColor(15, 23, 42); doc.setFont('courier', 'bold');
+    doc.text(t.linhaDigitavel, 105, y + 7, { align: 'center' });
+    doc.setFontSize(6.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 110, 130);
+    doc.text('LINHA DIGITÁVEL', 105, y + 14, { align: 'center' });
+  } else {
+    doc.setFontSize(7); doc.setTextColor(150, 160, 175); doc.setFont('helvetica', 'normal');
+    doc.text('[ Código de barras — gerado pela instituição bancária ]', 105, y + 10, { align: 'center' });
+  }
 }
 
 function gerarPaginaCheque(doc: jsPDF, t: TituloDocumentoItem) {
+  const EMPRESA = EMPRESA_DEFAULT;
   const L = 15, W = 180;
   let y = 18;
 

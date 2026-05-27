@@ -2,10 +2,10 @@
  * Motor de Cálculo Financeiro — Efficaz Factoring
  *
  * Fórmulas:
- * Encargo = ((Valor × TaxaCliente) ÷ 30) × PrazoEfetivo (D+2)
+ * Encargo = ((Valor × TaxaCliente) ÷ 30) × PrazoEfetivo (D+2 — benefício da empresa)
  * Se Encargo < 50, usar 50
  * ValorLiquidoCliente = Valor - Encargo
- * CustoCedente = ((Valor × TaxaFornecedor) ÷ 30) × PrazoEfetivo
+ * CustoCedente = ((Valor × TaxaFornecedor) ÷ 30) × Prazo (dias corridos — sem D+2)
  * SpreadBruto = Encargo - CustoCedente
  *
  * Regra D+2 (compensação bancária):
@@ -13,6 +13,10 @@
  * ficar disponível. Sábado é válido como D+2 (destino final) mas não
  * como D+1 (passo intermediário). Domingo nunca conta.
  * Ex.: quinta → D+1=sex, D+2=sáb  |  sexta → D+1=seg, D+2=ter
+ *
+ * REGRA DE NEGÓCIO:
+ * O benefício D+2 é exclusivo da empresa (Efficaz). O fornecedor paga
+ * sobre o prazo corrido (emissão → vencimento), sem acréscimo do D+2.
  */
 
 import { differenceInDays, addDays } from 'date-fns';
@@ -91,12 +95,13 @@ export function calcularOperacao(entrada: EntradaCalculo): ResultadoCalculo {
   const tcDecimal = taxaCliente / 100;
   const tfDecimal = taxaFornecedor / 100;
 
-  // Encargo e custo calculados sobre o prazo efetivo (D+2)
+  // Encargo calculado sobre prazoEfetivo (D+2 — benefício da empresa)
   let encargo = ((valor * tcDecimal) / 30) * prazoEfetivo;
   if (encargo < 50) encargo = 50;
 
   const valorLiquidoCliente = valor - encargo;
-  const custoCedente = ((valor * tfDecimal) / 30) * prazoEfetivo;
+  // CustoCedente usa prazo corrido (sem D+2 — o fornecedor não tem esse benefício)
+  const custoCedente = ((valor * tfDecimal) / 30) * prazo;
   const spreadBruto = encargo - custoCedente;
 
   // Taxas ao ano (base 360)

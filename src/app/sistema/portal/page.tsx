@@ -17,6 +17,14 @@ const statusTitulo: Record<string, { label: string; cor: string }> = {
   LIQUIDADO: { label: 'Pago', cor: 'bg-green-100 text-green-700' },
   VENCIDO:   { label: 'Vencido', cor: 'bg-red-100 text-red-700' },
 };
+function valorFontClass(value: string): string {
+  const len = value.replace(/\s/g, '').length;
+  if (len <= 4)  return 'text-2xl';
+  if (len <= 7)  return 'text-xl';
+  if (len <= 10) return 'text-lg';
+  if (len <= 13) return 'text-base';
+  return 'text-sm';
+}
 
 export default function PortalRelatorioPage() {
   const [dados, setDados] = useState<any>(null);
@@ -53,12 +61,12 @@ export default function PortalRelatorioPage() {
           { label: 'Total Antecipado', value: formatarMoeda(totalAntecipado), icon: TrendingUp, cor: 'text-green-600', bg: 'bg-green-50' },
           { label: 'Total em Encargos', value: formatarMoeda(totalEncargos), icon: Percent, cor: 'text-amber-600', bg: 'bg-amber-50' },
         ].map(({ label, value, icon: Icon, cor, bg }) => (
-          <div key={label} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+          <div key={label} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm overflow-hidden min-w-0">
             <div className={`w-10 h-10 ${bg} rounded-xl flex items-center justify-center mb-3`}>
               <Icon className={`w-5 h-5 ${cor}`} />
             </div>
-            <p className="text-xl font-bold text-gray-800">{value}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+            <p className={`${valorFontClass(value)} font-bold text-gray-800 leading-tight`}>{value}</p>
+            <p className="text-xs text-gray-500 mt-0.5 truncate">{label}</p>
           </div>
         ))}
       </div>

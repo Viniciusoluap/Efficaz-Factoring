@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 export const runtime = 'nodejs';
@@ -14,10 +12,7 @@ export async function GET() {
   }
 }
 
-export async function PUT(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
-
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const {
@@ -25,6 +20,7 @@ export async function PUT(req: NextRequest) {
       taxaMinimaFiscal, aliquotaImposto,
       aliquotaPIS, aliquotaCOFINS, aliquotaIRPJ,
       aliquotaCSLL, aliquotaISS, aliquotaIOF,
+      c6BankAccessToken, c6BankPersonId, c6BankWebhookSecret, c6BankSandbox,
     } = body;
 
     const tMF = parseFloat(String(taxaMinimaFiscal).replace(',', '.')) || 0.5;
@@ -41,35 +37,47 @@ export async function PUT(req: NextRequest) {
     const emailVal = emailSistema || null;
     const telVal = telefone || null;
     const endVal = endereco || null;
+    const c6Token = c6BankAccessToken || null;
+    const c6PersonId = c6BankPersonId || null;
+    const c6WebhookSecret = c6BankWebhookSecret || null;
+    const c6Sandbox = c6BankSandbox === false ? false : true;
 
-    // Raw SQL: bypasses Prisma client schema compatibility issues entirely.
-    // atualizadoEm omitted — column may not exist in all DB versions.
+    // Raw SQL: inclui atualizadoEm (NOT NULL @updatedAt sem default no PostgreSQL)
     await prisma.$executeRaw`
-      INSERT INTO configuracoes (id, "taxaMinimaFiscal", "aliquotaImposto", "nomeEmpresa", "cnpj", "emailSistema")
-      VALUES ('default', ${tMF}, ${tAI}, ${nome}, ${cnpjVal}, ${emailVal})
+      INSERT INTO configuracoes (
+        id, "taxaMinimaFiscal", "aliquotaImposto", "nomeEmpresa", "cnpj", "emailSistema",
+        "telefone", "endereco", "aliquotaPIS", "aliquotaCOFINS", "aliquotaIRPJ",
+        "aliquotaCSLL", "aliquotaISS", "aliquotaIOF",
+        "c6BankAccessToken", "c6BankPersonId", "c6BankWebhookSecret", "c6BankSandbox",
+        "atualizadoEm"
+      )
+      VALUES (
+        'default', ${tMF}, ${tAI}, ${nome}, ${cnpjVal}, ${emailVal},
+        ${telVal}, ${endVal}, ${tPIS}, ${tCOFINS}, ${tIRPJ},
+        ${tCSLL}, ${tISS}, ${tIOF},
+        ${c6Token}, ${c6PersonId}, ${c6WebhookSecret}, ${c6Sandbox},
+        NOW()
+      )
       ON CONFLICT (id) DO UPDATE SET
         "taxaMinimaFiscal" = ${tMF},
         "aliquotaImposto" = ${tAI},
         "nomeEmpresa" = ${nome},
         "cnpj" = ${cnpjVal},
-        "emailSistema" = ${emailVal}
+        "emailSistema" = ${emailVal},
+        "telefone" = ${telVal},
+        "endereco" = ${endVal},
+        "aliquotaPIS" = ${tPIS},
+        "aliquotaCOFINS" = ${tCOFINS},
+        "aliquotaIRPJ" = ${tIRPJ},
+        "aliquotaCSLL" = ${tCSLL},
+        "aliquotaISS" = ${tISS},
+        "aliquotaIOF" = ${tIOF},
+        "c6BankAccessToken" = ${c6Token},
+        "c6BankPersonId" = ${c6PersonId},
+        "c6BankWebhookSecret" = ${c6WebhookSecret},
+        "c6BankSandbox" = ${c6Sandbox},
+        "atualizadoEm" = NOW()
     `;
-
-    // Try to update columns added in later migrations (silently skip if absent).
-    try {
-      await prisma.$executeRaw`
-        UPDATE configuracoes SET
-          "telefone" = ${telVal},
-          "endereco" = ${endVal},
-          "aliquotaPIS" = ${tPIS},
-          "aliquotaCOFINS" = ${tCOFINS},
-          "aliquotaIRPJ" = ${tIRPJ},
-          "aliquotaCSLL" = ${tCSLL},
-          "aliquotaISS" = ${tISS},
-          "aliquotaIOF" = ${tIOF}
-        WHERE id = 'default'
-      `;
-    } catch { /* columns not yet migrated in this environment */ }
 
     let saved = null;
     try {

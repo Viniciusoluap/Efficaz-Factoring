@@ -9,6 +9,7 @@ import {
   Calendar, Users, Building2, Settings, LogOut,
   ChevronLeft, ChevronRight, Shield, X, Inbox,
 } from 'lucide-react';
+import LogoEfficaz from '@/components/LogoEfficaz';
 
 const navAdmin = [
   { href: '/sistema/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -60,9 +61,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
     <>
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 py-5 border-b border-slate-800">
-        <div className="w-9 h-9 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-          <TrendingUp className="w-5 h-5 text-white" />
-        </div>
+        <LogoEfficaz size={36} className="flex-shrink-0" />
         {!collapsed && (
           <div className="flex-1 overflow-hidden">
             <p className="text-white font-bold text-sm leading-tight">Efficaz</p>

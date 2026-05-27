@@ -1,12 +1,13 @@
 import { prisma } from '@/lib/prisma';
-import { formatarMoeda } from '@/lib/calculos';
-import { format } from 'date-fns';
+import { formatarMoeda, calcularDataD2 } from '@/lib/calculos';
+import { format, differenceInDays } from 'date-fns';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Layers } from 'lucide-react';
 import OperacaoStatusBtn from '@/components/sistema/OperacaoStatusBtn';
 import OperacaoAcoes from '@/components/sistema/OperacaoAcoes';
 import TitulosSelecionaveis, { TituloTabela } from '@/components/sistema/TitulosSelecionaveis';
+import DocumentosOperacao from '@/components/sistema/DocumentosOperacao';
 
 
 export default async function OperacaoDetalhePage({ params }: { params: { id: string } }) {
@@ -16,20 +17,39 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
       cliente: true,
       fornecedor: true,
       titulos: { orderBy: [{ dataVencimento: 'asc' }, { valor: 'asc' }] },
+      documentos: { orderBy: { criadoEm: 'desc' } },
     },
-  });
+  } as any);
 
   if (!operacao) notFound();
 
+  let opConfig: any = null;
+  try {
+    const cfgRows = await prisma.$queryRaw<any[]>`SELECT * FROM configuracoes WHERE id = 'default'`;
+    opConfig = cfgRows[0] ?? null;
+  } catch {}
+  const opTaxaMin = Number(opConfig?.taxaMinimaFiscal ?? 0.5);
+  const opAliquota = Number(opConfig?.aliquotaImposto ?? 38.63);
+
   const totais = operacao.titulos.reduce(
-    (acc, t) => ({
-      valor: acc.valor + Number(t.valor),
-      encargo: acc.encargo + Number(t.encargo),
-      liquidoCliente: acc.liquidoCliente + Number(t.valorLiquidoCliente),
-      spreadBruto: acc.spreadBruto + Number(t.spreadBruto),
-      spreadLiquido: acc.spreadLiquido + Number(t.spreadLiquido ?? 0),
-      imposto: acc.imposto + Number(t.impostoProvisao ?? 0),
-    }),
+    (acc, t) => {
+      let impostoT = 0;
+      try {
+        const d2 = calcularDataD2(new Date(t.dataVencimento));
+        const prazo = differenceInDays(d2, new Date(t.dataEmissao));
+        const baseEsp = Math.max(0, ((Number(t.valor) * (opTaxaMin / 100)) / 30) * prazo);
+        const impostoCalc = baseEsp * opAliquota / 100;
+        impostoT = Math.min(impostoCalc, Math.max(0, Number(t.spreadBruto)));
+      } catch {}
+      return {
+        valor: acc.valor + Number(t.valor),
+        encargo: acc.encargo + Number(t.encargo),
+        liquidoCliente: acc.liquidoCliente + Number(t.valorLiquidoCliente),
+        spreadBruto: acc.spreadBruto + Number(t.spreadBruto),
+        spreadLiquido: acc.spreadLiquido + Number(t.spreadBruto) - impostoT,
+        imposto: acc.imposto + impostoT,
+      };
+    },
     { valor: 0, encargo: 0, liquidoCliente: 0, spreadBruto: 0, spreadLiquido: 0, imposto: 0 }
   );
 
@@ -69,6 +89,8 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
     custoCedente: Number(t.custoCedente),
   }));
 
+  const c6BankConfigurado = Boolean(opConfig?.c6BankAccessToken && opConfig?.c6BankPersonId);
+
   const titulosTabela: TituloTabela[] = operacao.titulos.map(t => ({
     id: t.id,
     numero: t.numero,
@@ -85,6 +107,7 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
     encargo: Number(t.encargo),
     valorLiquidoCliente: Number(t.valorLiquidoCliente),
     spreadBruto: Number(t.spreadBruto),
+    linhaDigitavel: (t as any).linhaDigitavel ?? null,
   }));
 
   const titulosPDF = operacao.titulos.map(t => ({
@@ -214,6 +237,18 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
         clienteRepresentanteNome={operacao.cliente?.representanteNome ?? undefined}
         clienteRepresentanteCpf={operacao.cliente?.representanteCpf ?? undefined}
         isPaga={isPaga}
+        c6BankConfigurado={c6BankConfigurado}
+      />
+
+      {/* Documentos Assinados */}
+      <DocumentosOperacao
+        operacaoId={operacao.id}
+        initialDocs={((operacao as any).documentos ?? []).map((d: any) => ({
+          id: d.id,
+          nome: d.nome,
+          url: d.url,
+          criadoEm: d.criadoEm.toISOString(),
+        }))}
       />
 
       {operacao.observacoes && (
