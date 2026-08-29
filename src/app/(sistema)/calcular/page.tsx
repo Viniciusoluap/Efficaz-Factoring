@@ -35,7 +35,7 @@ export default function CalcularPage() {
       const d = differenceInDays(new Date(dataVencimento), new Date(dataEmissao));
       if (d > 0) setPrazoManual(String(d));
     }
-  }, [dataVencimento]);
+  }, [dataVencimento, dataEmissao]);
 
   const calcular = () => {
     setErro('');

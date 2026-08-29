@@ -5,6 +5,8 @@ import SessionProvider from '@/components/sistema/SessionProvider';
 import { TrendingUp, LogOut } from 'lucide-react';
 import Link from 'next/link';
 
+export const dynamic = 'force-dynamic';
+
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
   if (!session) redirect('/login');

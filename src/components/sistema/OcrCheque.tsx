@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { Upload, X, Loader2, CheckCircle, ScanLine } from 'lucide-react';
+import NextImage from 'next/image';
 
 type DadosExtraidos = {
   numero?: string;
@@ -144,9 +145,12 @@ export default function OcrCheque({
       ) : (
         <div className="space-y-3">
           <div className="relative">
-            <img
+            <NextImage
               src={imagem}
               alt="Cheque"
+              width={960}
+              height={384}
+              unoptimized
               className="w-full max-h-48 object-contain rounded-xl border border-blue-200 bg-white"
             />
           </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, FormEvent } from 'react';
 import { Save, Loader2, AlertCircle, CheckCircle2, User, Lock, Camera } from 'lucide-react';
+import Image from 'next/image';
 
 const inputCls = 'w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 bg-gray-50 focus:bg-white transition-all';
 const labelCls = 'block text-xs font-semibold text-gray-600 mb-1';
@@ -138,7 +139,7 @@ export default function PortalConfiguracoesPage() {
           className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-md group focus:outline-none disabled:opacity-70"
         >
           {fotoUrl ? (
-            <img src={fotoUrl} alt="Foto de perfil" className="w-full h-full object-cover" />
+            <Image src={fotoUrl} alt="Foto de perfil" fill sizes="96px" className="object-cover" unoptimized />
           ) : (
             <div className="w-full h-full bg-blue-100 flex items-center justify-center">
               <User className="w-10 h-10 text-blue-400" />

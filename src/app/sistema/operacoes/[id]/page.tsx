@@ -19,28 +19,21 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
       titulos: { orderBy: [{ dataVencimento: 'asc' }, { valor: 'asc' }] },
       documentos: { orderBy: { criadoEm: 'desc' } },
     },
-  } as any);
+  });
 
   if (!operacao) notFound();
 
-  let opConfig: any = null;
-  try {
-    const cfgRows = await prisma.$queryRaw<any[]>`SELECT * FROM configuracoes WHERE id = 'default'`;
-    opConfig = cfgRows[0] ?? null;
-  } catch {}
+  const opConfig = await prisma.configuracao.findUnique({ where: { id: 'default' } });
   const opTaxaMin = Number(opConfig?.taxaMinimaFiscal ?? 0.5);
   const opAliquota = Number(opConfig?.aliquotaImposto ?? 38.63);
 
   const totais = operacao.titulos.reduce(
     (acc, t) => {
-      let impostoT = 0;
-      try {
-        const d2 = calcularDataD2(new Date(t.dataVencimento));
-        const prazo = differenceInDays(d2, new Date(t.dataEmissao));
-        const baseEsp = Math.max(0, ((Number(t.valor) * (opTaxaMin / 100)) / 30) * prazo);
-        const impostoCalc = baseEsp * opAliquota / 100;
-        impostoT = Math.min(impostoCalc, Math.max(0, Number(t.spreadBruto)));
-      } catch {}
+      const d2 = calcularDataD2(new Date(t.dataVencimento));
+      const prazo = differenceInDays(d2, new Date(t.dataEmissao));
+      const baseEsp = Math.max(0, ((Number(t.valor) * (opTaxaMin / 100)) / 30) * prazo);
+      const impostoCalc = baseEsp * opAliquota / 100;
+      const impostoT = Math.min(impostoCalc, Math.max(0, Number(t.spreadBruto)));
       return {
         valor: acc.valor + Number(t.valor),
         encargo: acc.encargo + Number(t.encargo),
@@ -107,7 +100,7 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
     encargo: Number(t.encargo),
     valorLiquidoCliente: Number(t.valorLiquidoCliente),
     spreadBruto: Number(t.spreadBruto),
-    linhaDigitavel: (t as any).linhaDigitavel ?? null,
+    linhaDigitavel: t.linhaDigitavel ?? null,
   }));
 
   const titulosPDF = operacao.titulos.map(t => ({
@@ -243,7 +236,7 @@ export default async function OperacaoDetalhePage({ params }: { params: { id: st
       {/* Documentos Assinados */}
       <DocumentosOperacao
         operacaoId={operacao.id}
-        initialDocs={((operacao as any).documentos ?? []).map((d: any) => ({
+        initialDocs={operacao.documentos.map(d => ({
           id: d.id,
           nome: d.nome,
           url: d.url,

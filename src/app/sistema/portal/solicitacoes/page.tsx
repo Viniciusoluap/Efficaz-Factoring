@@ -5,6 +5,7 @@ import { formatarMoeda } from '@/lib/calculos';
 import { Send, Inbox, AlertCircle, CheckCircle2, Loader2, Clock, Paperclip, X, ImageIcon, FileText, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import Image from 'next/image';
 
 const TIPOS = [
   { value: 'CHEQUE', label: 'Cheque' },
@@ -185,7 +186,7 @@ export default function PortalSolicitacoesPage() {
                 {arquivos.map(arq => (
                   <div key={arq.id} className="relative group">
                     {arq.preview ? (
-                      <img src={arq.preview} alt={arq.file.name}
+                      <Image src={arq.preview} alt={arq.file.name} width={80} height={80} unoptimized
                         className="w-20 h-20 object-cover rounded-xl border border-gray-200" />
                     ) : (
                       <div className="w-20 h-20 flex flex-col items-center justify-center bg-gray-100 rounded-xl border border-gray-200 gap-1">

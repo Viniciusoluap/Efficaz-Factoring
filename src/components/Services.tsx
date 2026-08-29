@@ -24,7 +24,7 @@ const services = [
     icon: CreditCard,
     title: 'Compra de Recebíveis',
     description:
-      'Vendemos à prazo, receba à vista. Compramos seus títulos e cheques com análise personalizada e condições especiais.',
+      'Venda a prazo e receba à vista. Compramos seus títulos e cheques com análise personalizada e condições especiais.',
     highlight: 'Cheques e títulos',
     color: 'from-emerald-500 to-emerald-700',
     bgColor: 'bg-emerald-50',

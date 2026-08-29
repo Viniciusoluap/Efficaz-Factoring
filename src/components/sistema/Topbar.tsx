@@ -5,7 +5,7 @@ import { Bell, Menu, FileText, AlertTriangle, Clock } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 
 const titulos: Record<string, string> = {
@@ -33,6 +33,20 @@ type Notifs = {
   total: number;
 };
 
+const notificacoesVazias: Notifs = {
+  solicitacoesNaoLidas: 0,
+  titulosVencendoHoje: 0,
+  titulosVencidos: 0,
+  total: 0,
+};
+
+function isNotifs(value: unknown): value is Notifs {
+  if (typeof value !== 'object' || value === null) return false;
+  return Object.values(value).length >= 4
+    && ['solicitacoesNaoLidas', 'titulosVencendoHoje', 'titulosVencidos', 'total']
+      .every(key => Number.isInteger(Reflect.get(value, key)) && Reflect.get(value, key) >= 0);
+}
+
 interface TopbarProps {
   onMenuClick: () => void;
 }
@@ -43,22 +57,33 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
   const titulo = titulos[pathname] ?? 'Sistema';
   const hoje = format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR });
 
-  const [notifs, setNotifs] = useState<Notifs | null>(null);
+  const [notifs, setNotifs] = useState<Notifs>(notificacoesVazias);
+  const [carregandoNotifs, setCarregandoNotifs] = useState(true);
+  const [erroNotifs, setErroNotifs] = useState(false);
   const [open, setOpen] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
 
-  const carregar = () => {
-    fetch('/api/notificacoes')
-      .then(r => r.json())
-      .then(d => setNotifs(d))
-      .catch(() => {});
-  };
+  const carregar = useCallback(async () => {
+    try {
+      const response = await fetch('/api/notificacoes');
+      if (!response.ok) throw new Error(`Falha ao carregar notificações (${response.status})`);
+      const data: unknown = await response.json();
+      if (!isNotifs(data)) throw new Error('Resposta inválida da API de notificações');
+      setNotifs(data);
+      setErroNotifs(false);
+    } catch (error) {
+      console.error('[Topbar] Não foi possível carregar as notificações.', error);
+      setErroNotifs(true);
+    } finally {
+      setCarregandoNotifs(false);
+    }
+  }, []);
 
   useEffect(() => {
     carregar();
     const id = setInterval(carregar, 60_000);
     return () => clearInterval(id);
-  }, []);
+  }, [carregar]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -70,7 +95,7 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const total = notifs?.total ?? 0;
+  const total = notifs.total;
 
   return (
     <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-4 flex-shrink-0">
@@ -112,7 +137,7 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
               </div>
 
               <div className="divide-y divide-gray-50">
-                {notifs?.solicitacoesNaoLidas > 0 && (
+                {notifs.solicitacoesNaoLidas > 0 && (
                   <Link href="/sistema/solicitacoes" onClick={() => setOpen(false)}
                     className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
                     <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -127,7 +152,7 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
                   </Link>
                 )}
 
-                {notifs?.titulosVencendoHoje > 0 && (
+                {notifs.titulosVencendoHoje > 0 && (
                   <Link href="/sistema/vencimentos" onClick={() => setOpen(false)}
                     className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
                     <div className="w-8 h-8 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -142,7 +167,7 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
                   </Link>
                 )}
 
-                {notifs?.titulosVencidos > 0 && (
+                {notifs.titulosVencidos > 0 && (
                   <Link href="/sistema/titulos" onClick={() => setOpen(false)}
                     className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
                     <div className="w-8 h-8 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -157,7 +182,17 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
                   </Link>
                 )}
 
-                {total === 0 && (
+                {carregandoNotifs && (
+                  <div className="px-4 py-6 text-center text-sm text-gray-400">
+                    Carregando notificações...
+                  </div>
+                )}
+                {!carregandoNotifs && erroNotifs && (
+                  <div className="px-4 py-6 text-center text-sm text-red-500">
+                    Não foi possível carregar as notificações.
+                  </div>
+                )}
+                {!carregandoNotifs && !erroNotifs && total === 0 && (
                   <div className="px-4 py-6 text-center text-sm text-gray-400">
                     Nenhuma notificação pendente
                   </div>

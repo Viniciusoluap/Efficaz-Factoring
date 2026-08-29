@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth';
 import SessionProvider from '@/components/sistema/SessionProvider';
 import SistemaShell from '@/components/sistema/SistemaShell';
 
+export const dynamic = 'force-dynamic';
+
 export default async function SistemaLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
   if (!session) redirect('/login');

@@ -2,17 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { prisma } from '@/lib/prisma';
 import { calcularOperacao, calcularFiscal } from '@/lib/calculos';
+import { z } from 'zod';
+
+const pagamentoSchema = z.object({
+  valorPagamento: z.number().finite().positive(),
+});
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   if (!token) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
 
   try {
-    const { valorPagamento } = await req.json();
-    const pgtoNum = parseFloat(String(valorPagamento));
-    if (!pgtoNum || pgtoNum <= 0) {
+    const parsed = pagamentoSchema.safeParse(await req.json());
+    if (!parsed.success) {
       return NextResponse.json({ error: 'Valor de pagamento inválido.' }, { status: 400 });
     }
+    const pgtoNum = parsed.data.valorPagamento;
 
     const titulo = await prisma.titulo.findUnique({ where: { id: params.id } });
     if (!titulo) return NextResponse.json({ error: 'Título não encontrado.' }, { status: 404 });
@@ -26,11 +31,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     const novoValor = Math.round((valorAtual - pgtoNum) * 100) / 100;
 
-    let config: any = null;
-    try {
-      const rows = await prisma.$queryRaw`SELECT * FROM configuracoes WHERE id = 'default'`;
-      config = rows[0] ?? null;
-    } catch {}
+    const config = await prisma.configuracao.findUnique({ where: { id: 'default' } });
 
     const resultado = calcularOperacao({
       valor: novoValor,

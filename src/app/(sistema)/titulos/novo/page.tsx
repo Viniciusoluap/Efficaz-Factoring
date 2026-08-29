@@ -59,7 +59,7 @@ export default function NovoTituloPage() {
     } else {
       setPreview(null); setFiscal(null);
     }
-  }, [form.valor, form.taxaCliente, form.taxaFornecedor, form.dataEmissao, form.dataVencimento]);
+  }, [form]);
 
   const set = (k: string, v: string) => setForm(prev => ({ ...prev, [k]: v }));
 
