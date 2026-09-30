@@ -75,6 +75,40 @@ export default function NovoTituloPage() {
   const [partesSacados, setPartesSacados] = useState<Parte[]>([]);
   const [sugestaoAberta, setSugestaoAberta] = useState<string | null>(null);
 
+  // Rascunho automático (evita perder o preenchimento em caso de erro/recarregamento)
+  const RASCUNHO_KEY = 'efficaz:rascunho-operacao';
+  const [rascunhoPronto, setRascunhoPronto] = useState(false);
+  useEffect(() => {
+    if (!operacaoId) {
+      try {
+        const raw = localStorage.getItem(RASCUNHO_KEY);
+        if (raw) {
+          const d = JSON.parse(raw);
+          if (Array.isArray(d.titulos) && d.titulos.length) {
+            setTaxaCliente(d.taxaCliente ?? '');
+            setTaxaFornecedor(d.taxaFornecedor ?? '');
+            setClienteId(d.clienteId ?? '');
+            setFornecedorId(d.fornecedorId ?? '');
+            setObservacoes(d.observacoes ?? '');
+            setTitulos(d.titulos);
+            setExpandido(d.titulos[0].id);
+            if (d.etapa === 'titulos') setEtapa('titulos');
+          }
+        }
+      } catch {}
+    }
+    setRascunhoPronto(true);
+  }, [operacaoId]);
+
+  useEffect(() => {
+    if (!rascunhoPronto || operacaoId) return;
+    try {
+      localStorage.setItem(RASCUNHO_KEY, JSON.stringify({
+        taxaCliente, taxaFornecedor, clienteId, fornecedorId, observacoes, titulos, etapa,
+      }));
+    } catch {}
+  }, [rascunhoPronto, operacaoId, taxaCliente, taxaFornecedor, clienteId, fornecedorId, observacoes, titulos, etapa]);
+
   useEffect(() => {
     fetch('/api/clientes?ativo=true').then(r => r.json()).then(setClientes).catch(() => {});
     fetch('/api/fornecedores?ativo=true').then(r => r.json()).then(setFornecedores).catch(() => {});
@@ -198,8 +232,12 @@ export default function NovoTituloPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ taxaCliente, taxaFornecedor, clienteId, fornecedorId, observacoes, titulos, operacaoId }),
       });
-      if (!res.ok) throw new Error((await res.json()).error ?? 'Erro ao salvar.');
-      const data = await res.json();
+      if (!res.ok) {
+        const b = await res.json().catch(() => ({}));
+        throw new Error(b.error ? (b.detail ? `${b.error} (${b.detail})` : b.error) : 'Erro ao salvar.');
+      }
+      await res.json();
+      try { localStorage.removeItem(RASCUNHO_KEY); } catch {}
       router.push(operacaoId ? `/sistema/operacoes/${operacaoId}` : '/sistema/titulos');
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Erro ao salvar.');
